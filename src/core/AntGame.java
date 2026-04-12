@@ -1,19 +1,19 @@
 package core;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.awt.Shape;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.geom.Path2D;
+import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.image.Image;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -22,632 +22,628 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.Timer;
+
 import ants.ThrowerAnt;
 
 /**
- * A class that controls the graphical game of Ants vs. Some-Bees. Game simulation system and GUI interaction are intermixed.
- * 
- * @author Joel
- * @version Fa2014
+ * A class that controls the graphical game of Ants vs. Some-Bees.
+ * Converted from Swing to JavaFX.
  */
-@SuppressWarnings("serial")
-public class AntGame extends JPanel implements ActionListener, MouseListener
+public class AntGame
 {
-	//game models
-	private AntColony colony;
-	private Hive hive;
-	private static final String ANT_FILE = "antlist.properties";	
-	private static final String ANT_PKG = "ants";
-	
-	//game clock & speed
-	public static final int FPS = 30; //target frames per second
-	public static final int TURN_SECONDS = 3; //seconds per turn
-	public static final double LEAF_SPEED = .3; //in seconds
-	private int turn; //current game turn
-	private int frame; //time elapsed since last turn
-	private Timer clock;
-	
-	//ant properties (laoded from external files, stored as member variables)
-	private final ArrayList<String> ANT_TYPES;
-	private final Map<String,Image> ANT_IMAGES;// = new HashMap<String,Image>();
-	private final Map<String,Color> LEAF_COLORS;// = new HashMap<String, Color>();
+    // game models
+    private AntColony colony;
+    private Hive hive;
+    private static final String ANT_FILE = "antlist.properties";
+    private static final String ANT_PKG = "ants";
 
-	//other images (stored as member variables)
-	private final Image TUNNEL_IMAGE = ImageUtils.loadImage("img/tunnel.gif");	
-	private final Image BEE_IMAGE = ImageUtils.loadImage("img/bee.gif");
-	private final Image REMOVER_IMAGE = ImageUtils.loadImage("img/remover.gif");
-	
-	//positioning constants
-	public static final Dimension FRAME_SIZE = new Dimension(1024,768);
-	public static final Dimension ANT_IMAGE_SIZE = new Dimension(66,71); //assumed size; may be greater than actual image size
-	public static final int BEE_IMAGE_WIDTH = 58;
-	public static final Point PANEL_POS = new Point(20,40);
-	public static final Dimension PANEL_PADDING = new Dimension(2,4);
-	public static final Point PLACE_POS = new Point(40,180);
-	public static final Dimension PLACE_PADDING = new Dimension(10,10);
-	public static final int PLACE_MARGIN = 10;
-	public static final Point HIVE_POS = new Point(875,300);
-	public static final int CRYPT_HEIGHT = 650;
-	public static final Point MESSAGE_POS = new Point(120,20);
-	public static final Dimension LEAF_START_OFFSET = new Dimension(30,30);
-	public static final Dimension LEAF_END_OFFSET = new Dimension(50,30);
-	public static final int LEAF_SIZE = 40;
-	
-	//areas that can be clicked
-	private Map<Rectangle, Place> colonyAreas; //maps from a clickable area to a Place
-	private Map<Place, Rectangle> colonyRects; //maps from a Place to its clickable rectangle (reverse lookup!)
-	private Map<Rectangle, Ant> antSelectorAreas; //maps from a clickable area to an Ant that can be deployed
-	private Rectangle removerArea; //click to remove an ant
-	private Place tunnelEnd; //a Place representing the end of the tunnels (for drawing)
-	private Ant selectedAnt; //which ant is currently selected
+    // game clock & speed
+    public static final int FPS = 30;
+    public static final int TURN_SECONDS = 3;
+    public static final double LEAF_SPEED = 0.3;
+    private int turn;
+    private int frameCount;
+    private AnimationTimer clock;
+    private long lastFrameTime = 0;
 
-	//variables tracking animations
-	private Map<Bee,AnimPosition> allBeePositions; //maps from Bee to an object storing animation status
-	private ArrayList<AnimPosition> leaves; //leaves we're animating
-	
-	/**
-	 * Creates a new game of Ants vs. Some-Bees, with the given colony and hive setup
-	 * @param colony The ant colony for the game
-	 * @param hive The hive (and attack plan) for the game
-	 */
-	public AntGame(AntColony colony, Hive hive)
-	{
-		//game init stuff
-		this.colony = colony;
-		this.hive = hive;
+    // ant properties
+    private final ArrayList<String> ANT_TYPES;
+    private final Map<String, Image> ANT_IMAGES;
+    private final Map<String, Color> LEAF_COLORS;
 
-		//game clock tracking
-		this.frame = 0;
-		this.turn = 0;
-		this.clock = new Timer(1000/FPS, this);
-				
-		//member ant property storage variables
-		ANT_TYPES = new ArrayList<String>();
-		ANT_IMAGES = new HashMap<String,Image>();
-		LEAF_COLORS = new HashMap<String, Color>();
-		initializeAnts();
+    // images
+    private final Image TUNNEL_IMAGE = loadImage("img/tunnel.gif");
+    private final Image BEE_IMAGE = loadImage("img/bee.gif");
+    private final Image REMOVER_IMAGE = loadImage("img/remover.gif");
 
-		//tracking bee animations
-		allBeePositions = new HashMap<Bee, AnimPosition>();
-		initializeBees();
-		leaves = new ArrayList<AnimPosition>();
-		
-		//map clickable areas to what they refer to. Might be more efficient to use separate components, but this keeps everything together
-		antSelectorAreas = new HashMap<Rectangle, Ant>();	
-		colonyAreas = new HashMap<Rectangle, Place>();
-		colonyRects = new HashMap<Place, Rectangle>();
-		initializeAntSelector();
-		initializeColony();
-		
-		//adding interaction
-		this.addMouseListener(this);
-		
-		//basic appearance
-		this.setPreferredSize(FRAME_SIZE);
-		this.setBackground(Color.WHITE);		
-		
-		//make and show the frame!
-		JFrame frame = new JFrame("Ants vs. Some-Bees");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setResizable(false);
-		frame.add(this);
-		frame.pack();
-		frame.setVisible(true);
-	}
+    // positioning constants
+    public static final double FRAME_WIDTH = 1024;
+    public static final double FRAME_HEIGHT = 768;
+    public static final double ANT_IMAGE_WIDTH = 66;
+    public static final double ANT_IMAGE_HEIGHT = 71;
+    public static final double BEE_IMAGE_WIDTH = 58;
+    public static final double PANEL_X = 20;
+    public static final double PANEL_Y = 40;
+    public static final double PANEL_PAD_W = 2;
+    public static final double PANEL_PAD_H = 4;
+    public static final double PLACE_X = 40;
+    public static final double PLACE_Y = 180;
+    public static final double PLACE_PAD_W = 10;
+    public static final double PLACE_PAD_H = 10;
+    public static final double PLACE_MARGIN = 10;
+    public static final double HIVE_X = 875;
+    public static final double HIVE_Y = 300;
+    public static final double CRYPT_HEIGHT = 650;
+    public static final double LEAF_START_X = 30;
+    public static final double LEAF_START_Y = 30;
+    public static final double LEAF_END_X = 50;
+    public static final double LEAF_END_Y = 30;
+    public static final double LEAF_SIZE = 40;
 
-	public void paintComponent(Graphics g)
-	{
-		super.paintComponent(g); //take care of anything else
-		Graphics2D g2d = (Graphics2D)g;
-		g2d.clearRect(0, 0, FRAME_SIZE.width, FRAME_SIZE.height); //clear to background color
+    // clickable areas
+    private Map<double[], Place> colonyAreas;
+    private Map<Place, double[]> colonyRects;
+    private Map<double[], Ant> antSelectorAreas;
+    private double[] removerArea;
+    private Place tunnelEnd;
+    private Ant selectedAnt;
 
-		drawAntSelector(g2d);
-		
-		//text displays
-		String antString = "none";
-		if(selectedAnt != null){
-			antString = selectedAnt.getClass().getName();
-			antString = antString.substring(0, antString.length()-3); //remove the word "ant"
-		}
-		g2d.drawString("Ant selected: "+antString, 20, 20); //hard-coded positions, make variable?
-		g2d.drawString("Food: "+colony.getFood()+", Turn: "+turn, 20, 140);
-				
-		drawColony(g2d);		
-		drawBees(g2d);
-		drawLeaves(g2d);
-		
-		if(!clock.isRunning()){ //start text
-			g2d.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 32));
-			g2d.setColor(Color.RED);
-			g2d.drawString("CLICK TO START", 350, 550);
-		}
-	}
+    // animations
+    private Map<Bee, AnimPosition> allBeePositions;
+    private ArrayList<AnimPosition> leaves;
 
-	/**
-	 * Runs the actual game, processing what occurs on every frame of the game (including individual turns).
-	 * This handles both some game logic (turn order) and animation control
-	 */
-	private void nextFrame()
-	{
-		if(frame == 0) //at the start of a turn
-		{
-			System.out.println("TURN: "+turn);
+    // JavaFX
+    private Canvas canvas;
+    private GraphicsContext gc;
+    private boolean gameStarted = false;
+    private boolean gameOver = false;
 
-			//ants take action!
-			for(Ant ant : colony.getAllAnts())
-			{
-				if(ant instanceof ThrowerAnt) //if we're a thrower, might need to make a leaf!
-				{
-					Bee target = ((ThrowerAnt)ant).getTarget(); //who we'll throw at (really which square, but works out the same)
-					if(target != null)
-						createLeaf(ant, target);
-				}
-				ant.action(colony); //take the action (actually completes the throw now)
-			}
-			
-			//bees take action!
-			for(Bee bee : colony.getAllBees())
-			{
-				bee.action(colony);
-				startAnimation(bee); //start up animation for the bee if needed
-			}
-			
-			//new invaders attack!
-			Bee[] invaders = hive.invade(colony, turn); //this moves the bees into the colony
-			for(Bee bee : invaders) //animate the movement
-				startAnimation(bee);
+    /**
+     * Creates a new AntGame with JavaFX rendering
+     */
+    public AntGame(AntColony colony, Hive hive, Stage stage)
+    {
+        this.colony = colony;
+        this.hive = hive;
+        this.frameCount = 0;
+        this.turn = 0;
 
-			//if want to do this to ants as well, will need to start storing dead ones with AnimPositions
-		}
-		if(frame == (int)(LEAF_SPEED*FPS)) //after leaves animate
-		{
-			for(Map.Entry<Bee,AnimPosition> entry : allBeePositions.entrySet()) //remove dead bees
-			{
-				if(entry.getKey().getArmor() <= 0){ //if dead bee
-					AnimPosition pos = entry.getValue();
-					pos.animateTo((int)pos.x, CRYPT_HEIGHT, FPS*TURN_SECONDS);
-				}
-			}
-		}
-		
-		//every frame
-		for(AnimPosition pos : allBeePositions.values()) //apply animations to all the bees
-		{
-			if(pos.framesLeft > 0)
-				pos.step();
-		}
-		Iterator<AnimPosition> iter = leaves.iterator(); //apply animations ot all the leaves
-		while(iter.hasNext()) { //iterator so we can remove when finished
-			AnimPosition leaf = iter.next();
-			if(leaf.framesLeft > 0)
-				leaf.step();
-			else
-				iter.remove(); //remove the leaf if done animating
-		}
-					
-		this.repaint(); //request an update per frame!
-		
-		//ADVANCE THE CLOCK COUNTERS
-		frame++; //count the frame
-		//System.out.println("frame: "+frame);
-		if(frame == FPS*TURN_SECONDS){ //if TURN seconds worth of frames
-			turn++; //next turn
-			frame = 0; //reset frame
-		}
-		
-		if(frame == (int)(TURN_SECONDS*FPS/2)) //wait half a turn (1.5 sec) before ending
-		{
-			//check for end condition before proceeding
-			if(colony.queenHasBees()) { //we lost!
-				JOptionPane.showMessageDialog(this, "The ant queen has perished! Please try again.", "Bzzzzz!", JOptionPane.PLAIN_MESSAGE);
-				System.exit(0); //quit
-			}
-			if(hive.getBees().length + colony.getAllBees().size() == 0){ //no more bees--we won!
-				JOptionPane.showMessageDialog(this, "All bees are vanquished. You win!", "Yaaaay!", JOptionPane.PLAIN_MESSAGE);
-				System.exit(0); //quit
-			}
-		}
-	}
+        ANT_TYPES = new ArrayList<>();
+        ANT_IMAGES = new HashMap<>();
+        LEAF_COLORS = new HashMap<>();
+        initializeAnts();
 
-	//
-	/**
-	 * Handles clicking on the screen (used for selecting and deploying ants).
-	 * Synchronized method so we don't create conflicts in amount of food remaining.
-	 * @param e The mouse event representing the click
-	 */
-	private synchronized void handleClick(MouseEvent e)
-	{
-		Point pt = e.getPoint();
-				
-		//check if deploying an ant
-		for(Rectangle rect : colonyAreas.keySet())
-		{
-			if(rect.contains(pt)) {
-				if(selectedAnt == null){
-					colony.removeAnt(colonyAreas.get(rect));
-					return; //stop searching
-				}
-				else
-				{
-					Ant deployable = buildAnt(selectedAnt.getClass().getName()); //make a new ant of the appropriate type
-					colony.deployAnt(colonyAreas.get(rect), deployable);
-					return; //stop searching
-				}
-			}
-		}
-		
-		//check if selecting an ant
-		for(Rectangle rect : antSelectorAreas.keySet())
-		{
-			if(rect.contains(pt)) {
-				selectedAnt = antSelectorAreas.get(rect);
-				return; //stop searching
-			}
-		}
+        allBeePositions = new HashMap<>();
+        initializeBees();
+        leaves = new ArrayList<>();
 
-		//check if remover
-		if(removerArea.contains(pt)) {
-			selectedAnt = null; //mark as such
-			return; //stop searching
-		}
-	}
-	
-	//Specifies and starts an animation for a Bee (moving to a particular place)
-	private void startAnimation(Bee b)
-	{
-		AnimPosition anim = allBeePositions.get(b);
-		if(anim.framesLeft == 0) //if not already animating
-		{
-			Rectangle rect = colonyRects.get(b.getPlace()); //where we want to go to
-			if(rect != null && !rect.contains(anim.x, anim.y)) //if we're not in our target place
-				anim.animateTo(rect.x + PLACE_PADDING.width, rect.y + PLACE_PADDING.height, FPS*TURN_SECONDS);
-		}
-	}
-	
-	//Creates a new leaf (animated) from the Ant source to the Bee target.
-	//Note that really only cares about the target's Place (Ant can target other Bees in same Place)
-	private void createLeaf(Ant source, Bee target)
-	{
-		Rectangle antRect = colonyRects.get(source.getPlace());
-		Rectangle beeRect = colonyRects.get(target.getPlace());		
-		int startX = antRect.x+LEAF_START_OFFSET.width;
-		int startY = antRect.y+LEAF_START_OFFSET.height;
-		int endX = beeRect.x+LEAF_END_OFFSET.height;
-		int endY = beeRect.y+LEAF_END_OFFSET.height;
-		
-		AnimPosition leaf = new AnimPosition(startX, startY);
-		leaf.animateTo(endX, endY, (int)(LEAF_SPEED*FPS));
-		leaf.color = LEAF_COLORS.get(source.getClass().getName());
-		
-		leaves.add(leaf);
-	}
-	
-	//Draws all the places for the Colony on the given Graphics2D
-	//Includes drawing the Ants deployed to the Colony (but not the Bees moving through it)
-	private void drawColony(Graphics2D g2d)
-	{
-		for(Map.Entry<Rectangle,Place> entry : colonyAreas.entrySet())
-		{
-			Rectangle rect = entry.getKey(); //rectangle area for this place
-			Place place = entry.getValue(); //place to draw
+        antSelectorAreas = new HashMap<>();
+        colonyAreas = new HashMap<>();
+        colonyRects = new HashMap<>();
+        initializeAntSelector();
+        initializeColony();
 
-			g2d.setColor(Color.BLACK);
-			g2d.draw(rect); //border box (where to click)
+        // setup canvas
+        canvas = new Canvas(FRAME_WIDTH, FRAME_HEIGHT);
+        gc = canvas.getGraphicsContext2D();
 
-			if(place != tunnelEnd) //don't draw for queen location
-				g2d.drawImage(TUNNEL_IMAGE, rect.x, rect.y, null); //decorative image
-			
-			Ant ant = place.getAnt();
-			if(ant != null){ //draw the ant if we have one
-				Image img = ANT_IMAGES.get(ant.getClass().getName());
-				g2d.drawImage(img, rect.x+PLACE_PADDING.width, rect.y+PLACE_PADDING.height, null);
-			}
-			
-		}
-	}
+        // mouse click handling
+        canvas.setOnMousePressed(e -> {
+            handleClick(e.getX(), e.getY());
+            if (!gameStarted) {
+                gameStarted = true;
+                clock.start();
+            }
+            render();
+        });
 
-	//Draws all the Bees (included deceased) in their current locations
-	private void drawBees(Graphics2D g2d)
-	{
-		for(AnimPosition pos : allBeePositions.values()) //go through all the Bee positions
-		{
-			g2d.drawImage(BEE_IMAGE, (int)pos.x, (int)pos.y, null); //draw a bee at that position!
-		}
-	}
-	
-	//Draws all the leaves (animation elements) at their current location
-	private void drawLeaves(Graphics2D g2d)
-	{
-		for(AnimPosition leafPos : leaves)
-		{
-			double angle = leafPos.framesLeft*Math.PI/8; //spin PI/8 per frame (magic variable)
-			Shape leaf = leafShape((int)leafPos.x, (int)leafPos.y, angle, LEAF_SIZE);
-			g2d.setColor(leafPos.color);
-			g2d.fill(leaf);
-		}
-	}
-	
-	/**
-	 * Generates the geometric shape to draw for a leaf
-	 * @param x starting point (center) x
-	 * @param y starting point (center) y
-	 * @param angle current angle the leaf is pointing
-	 * @param length length of the leaf
-	 * @return a new leaf shape
-	 */
-	private Shape leafShape(int x, int y, double angle, int length) 
-	{
-		//calculate angles and distances to move
-		double[] a = {angle - Math.PI, angle - 3*Math.PI/4, angle - Math.PI/2, angle - Math.PI/4, angle, angle+Math.PI/4, angle + Math.PI/2, angle + 3*Math.PI/4};
-	    double[] d = {length/3, length/2.5, length/2, length/1.5, length, length/1.5, length/2, length/2.5};
-		
-	    //build a shape that is vaguely leaf-like
-		Path2D.Double curve = new Path2D.Double();
-		curve.moveTo(x+Math.cos(a[0])*d[0], y+Math.sin(a[0])*d[0]); //mathematical magic (just moving from start by given angle and distance, in order)
-		curve.quadTo(x+Math.cos(a[1])*d[1], y+Math.sin(a[1])*d[1], 	x+Math.cos(a[2])*d[2], y+Math.sin(a[2])*d[2]);
-		curve.quadTo(x+Math.cos(a[3])*d[3], y+Math.sin(a[3])*d[3], 	x+Math.cos(a[4])*d[4], y+Math.sin(a[4])*d[4]);
-		curve.quadTo(x+Math.cos(a[5])*d[5], y+Math.sin(a[5])*d[5], 	x+Math.cos(a[6])*d[6], y+Math.sin(a[6])*d[6]);
-		curve.quadTo(x+Math.cos(a[7])*d[7], y+Math.sin(a[7])*d[7], 	x+Math.cos(a[0])*d[0], y+Math.sin(a[0])*d[0]);
-		
-		return curve;
-	}
-	
-	//Draws the ant selector area
-	private void drawAntSelector(Graphics2D g2d)
-	{
-		//go through each selector area
-		for(Map.Entry<Rectangle,Ant> entry : antSelectorAreas.entrySet())
-		{
-			Rectangle rect = entry.getKey(); //selected area
-			Ant ant = entry.getValue(); //ant to select
-			
-			//box status
-			g2d.setColor(Color.WHITE);
-			if(ant.getFoodCost() > colony.getFood())
-				g2d.setColor(Color.GRAY);
-			else if(ant == this.selectedAnt)
-				g2d.setColor(Color.BLUE);
-			g2d.fill(rect);
+        Pane root = new Pane(canvas);
+        Scene scene = new Scene(root, FRAME_WIDTH, FRAME_HEIGHT);
 
-			//box outline
-			g2d.setColor(Color.BLACK);
-			g2d.draw(rect);
+        stage.setTitle("Ants vs. Some-Bees");
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.setOnCloseRequest(e -> {
+            if (clock != null) clock.stop();
+            Platform.exit();
+        });
+        stage.show();
 
-			//ant image
-			Image img = ANT_IMAGES.get(ant.getClass().getName());
-			g2d.drawImage(img, rect.x+PANEL_PADDING.width, rect.y+PANEL_PADDING.height, null);
-			
-			//food cost
-			g2d.drawString(""+ant.getFoodCost(), rect.x+(rect.width/2), rect.y+ANT_IMAGE_SIZE.height+4+PANEL_PADDING.height);
-		}
+        // setup game loop
+        clock = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (lastFrameTime == 0) {
+                    lastFrameTime = now;
+                    return;
+                }
+                // throttle to FPS
+                if (now - lastFrameTime >= 1_000_000_000L / FPS) {
+                    lastFrameTime = now;
+                    nextFrame();
+                }
+            }
+        };
 
-		//for removing an ant
-		if(this.selectedAnt == null) {
-			g2d.setColor(Color.BLUE);
-			g2d.fill(removerArea);
-		}		
-		g2d.setColor(Color.BLACK);
-		g2d.draw(removerArea);
-		g2d.drawImage(REMOVER_IMAGE, removerArea.x+PANEL_PADDING.width, removerArea.y+PANEL_PADDING.height, null);
-	}
+        render(); // draw initial screen
+    }
 
+    // -------------------------
+    // GAME LOGIC
+    // -------------------------
 
-	/**
-	 * Initializes the Ant graphics for the game. This method loads Ant details from an external file.
-	 * Note that this method MUST be called before others (since they rely on the Ant details!)
-	 */
-	private void initializeAnts()
-	{
-		//load ant properties from external file
-		try {
-			Scanner sc = new Scanner(new File(ANT_FILE));
-			while(sc.hasNextLine()) {
-				String line = sc.nextLine();
-				if(line.matches("\\w.*")) { //not a comment
-					String[] parts = line.split(","); //get the entry parts
-					String antType = ANT_PKG+"."+parts[0].trim(); //prepend package name
-					try{
-						Class.forName(antType); //make sure the class is implemented and we can load it
-						ANT_TYPES.add(antType);
-						ANT_IMAGES.put(antType, ImageUtils.loadImage(parts[1].trim()));
-						if(parts.length > 2)
-							LEAF_COLORS.put(antType, new Color(Integer.parseInt(parts[2].trim())));
-					}catch(ClassNotFoundException e){} //if class isn't found, will continue (reading next line)
-				}
-			}
-			sc.close();
-		}catch(IOException e){ //for IOException, NumberFormatException, ArrayIndex exception... basically if anything goes wrong, don't crash
-			System.out.println("Error loading insect gui properties: " + e);
-		}
+    private void nextFrame()
+    {
+        if (gameOver) return;
 
-	}
-	
-	/**
-	 * Initializes the Bee graphics for the game. Sets up positions for animations
-	 */
-	private void initializeBees()
-	{
-		Bee[] bees = this.hive.getBees();
-		for(int i=0; i<bees.length; i++)
-		{
-			allBeePositions.put(bees[i], 
-					new AnimPosition( (int)(HIVE_POS.x+(20*Math.random()-10)), (int)(HIVE_POS.y +(100*Math.random()-50)) )
-			);
-		}
-	}
-	
-	/**
-	 * Initializes the Colony graphics for the game.
-	 * Assumes that the AntColony.getPlaces() method returns places in order by row
-	 */
-	private void initializeColony()
-	{
-		Point pos = new Point(PLACE_POS); //start point of the places
-		int width = BEE_IMAGE_WIDTH + 2*PLACE_PADDING.width;
-		int height = ANT_IMAGE_SIZE.height + 2*PLACE_PADDING.height;
-		int row = 0;
-		pos.translate((width+PLACE_MARGIN)/2,0); //extra shift to make room for queen
-		for(Place place : colony.getPlaces())
-		{
-			if(place.getExit() == colony.getQueenPlace()) //if this place leads to the queen (the end)
-			{
-				pos.setLocation(PLACE_POS.x, PLACE_POS.y + row*(height + PLACE_MARGIN)); //move down to beginning of next row
-				pos.translate((width+PLACE_MARGIN)/2,0); //extra shift to make room for queen
-				row++; //increase row number
-			}
-			
-			Rectangle clickable = new Rectangle(pos.x, pos.y, width, height);
-			this.colonyAreas.put(clickable, place);
-			this.colonyRects.put(place, clickable);
-			
-			pos.translate(width+PLACE_MARGIN, 0); //shift rectangle position for next run
-		}
+        if (frameCount == 0)
+        {
+            System.out.println("TURN: " + turn);
 
-		//make queen location	
-		pos.setLocation(0, PLACE_POS.y + (row-1)*(height+PLACE_MARGIN)/2); //middle of the tunnels (about)
-		Rectangle queenRect = new Rectangle(pos.x, pos.y,0,0); //no size, will not be drawn
-		tunnelEnd = colony.getQueenPlace();
-		this.colonyAreas.put(queenRect, tunnelEnd);
-		this.colonyRects.put(tunnelEnd, queenRect);
-	}
+            // ants act
+            for (Ant ant : colony.getAllAnts())
+            {
+                if (ant instanceof ThrowerAnt)
+                {
+                    Bee target = ((ThrowerAnt) ant).getTarget();
+                    if (target != null)
+                        createLeaf(ant, target);
+                }
+                ant.action(colony);
+            }
 
-	/**
-	 * Initializes the graphical Ant Selector area.
-	 * Assumes that the Ants have already been initialized (and have established image resources)
-	 */
-	private void initializeAntSelector()
-	{
-		Point pos = new Point(PANEL_POS); //starting point of the panel
-		int width = ANT_IMAGE_SIZE.width + 2*PANEL_PADDING.width;
-		int height = ANT_IMAGE_SIZE.height + 2*PANEL_PADDING.height;
-		
-		removerArea = new Rectangle(pos.x, pos.y, width, height);
-		pos.translate(width+2, 0);
-		
-		for(String antType : ANT_TYPES) //go through the ants in the types; in order
-		{
-			Rectangle clickable = new Rectangle(pos.x, pos.y, width, height); //where to put the selector
-			Ant ant = buildAnt(antType); //the ant that gets deployed from that selector
-			this.antSelectorAreas.put(clickable, ant); //register the deployable ant so we can select it
-			
-			pos.translate(width+2, 0); //shift rectangle position for next run
-		}
-	}
-	
-	/**
-	 * Returns a new instance of an Ant object of the given subclass
-	 * @param antType The name of an Ant subclass (e.g., "HarvesterAnt")
-	 * @return An instance of that subclass, created using the default constructor
-	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private Ant buildAnt(String antType)
-	{
-		Ant ant = null;
-		try{
-			Class antClass = Class.forName(antType); //what class is this type
-			Constructor constructor = antClass.getConstructor(); //find the default constructor (using reflection)
-			ant = (Ant)constructor.newInstance(); //call the default constructor to make a new ant
-		}catch(Exception e){}
-		
-		return ant; //return the new ant
-	}
-	
+            // bees act
+            for (Bee bee : colony.getAllBees())
+            {
+                bee.action(colony);
+                startAnimation(bee);
+            }
 
-	////////////////////
-	// Event Handlers //
-	////////////////////
-	
-	public void actionPerformed(ActionEvent e)
-	{
-		if(e.getSource() == clock) //in case we want buttons later or something
-			nextFrame();
-	}
-	
-	public void mousePressed(MouseEvent event)
-	{
-		handleClick(event); //pass to synchronized method for thread safety!
-		this.repaint(); //request a repaint
-		if(!clock.isRunning())
-			clock.start();
-	}
+            // new invaders
+            Bee[] invaders = hive.invade(colony, turn);
+            for (Bee bee : invaders)
+                startAnimation(bee);
+        }
 
-	public void mouseClicked(MouseEvent e){}
-	public void mouseReleased(MouseEvent e){}
-	public void mouseEntered(MouseEvent e){}
-	public void mouseExited(MouseEvent e){}
-	
-	/**
-	 * An inner class that encapsulates location information for animation
-	 */
-	private static class AnimPosition {
-		private double x,y; //current position
-		private double dx,dy; //amount to move each frame (double precision)
-		private int framesLeft; //frames left in animation
-		private Color color; //color of thing we're animating (if relevant)
-		
-		/**
-		 * Creates a new AnimPosition at the given coordinates
-		 * @param x
-		 * @param y
-		 */
-		public AnimPosition(int x, int y) {
-			this.x = x;
-			this.y = y;
-		}
+        if (frameCount == (int)(LEAF_SPEED * FPS))
+        {
+            for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet())
+            {
+                if (entry.getKey().getArmor() <= 0)
+                {
+                    AnimPosition pos = entry.getValue();
+                    pos.animateTo((int) pos.x, (int) CRYPT_HEIGHT, FPS * TURN_SECONDS);
+                }
+            }
+        }
 
-		/**
-		 * Moves (translates) the animation position by a single frame
-		 */
-		public void step() {
-			x += dx;
-			y += dy;
-			framesLeft--;
-		}
-		
-		/**
-		 * Calculates the animation movements to get to the given position from the current position in the specified number of frames
-		 * @param nx Target x
-		 * @param ny Target y
-		 * @param frames Number of frames to move in
-		 */
-		public void animateTo(int nx, int ny, int frames) {
-			framesLeft = frames; //reset number of frames to move
-			dx = (nx - x)/framesLeft; //delta is distance between divided by num frames
-			dy = (ny - y)/framesLeft;
-		}
-		
-		public String toString() {
-			return "AnimPosition[x="+x+",y="+y+",dx="+dx+",dy="+dy+",framesLeft="+framesLeft+"]";
-		}	
-	}
-	
-	/**
-	 * A utility class for working with external images (placed as inner class so less overwhelming)
-	 */
-	public static class ImageUtils
-	{
-		/**
-		 * Loads an image object with the given filename.
-		 * @param filename The path and filename of the image to load
-		 * @return An Image object representing that image.
-		 */
-		public static Image loadImage(String filename)
-		{
-			Image img = null;
+        // step animations
+        for (AnimPosition pos : allBeePositions.values())
+        {
+            if (pos.framesLeft > 0) pos.step();
+        }
+        Iterator<AnimPosition> iter = leaves.iterator();
+        while (iter.hasNext())
+        {
+            AnimPosition leaf = iter.next();
+            if (leaf.framesLeft > 0)
+                leaf.step();
+            else
+                iter.remove();
+        }
 
-			try {
-			    img = ImageIO.read(new File(filename)); //read the image from a file
-			}
-			catch (IOException e) {
-			    System.err.println("Error loading \'" +filename+ "\': "+e.getMessage());
-			}
-			return img; //return the image
-		}
-	}
-	
+        render();
+
+        frameCount++;
+        if (frameCount == FPS * TURN_SECONDS)
+        {
+            turn++;
+            frameCount = 0;
+        }
+
+        // check end conditions halfway through turn
+        if (frameCount == (int)(TURN_SECONDS * FPS / 2))
+        {
+            if (colony.queenHasBees())
+            {
+                gameOver = true;
+                clock.stop();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Bzzzzz!");
+                    alert.setHeaderText(null);
+                    alert.setContentText("The ant queen has perished! Please try again.");
+                    alert.showAndWait();
+                    Platform.exit();
+                });
+            }
+            else if (hive.getBees().length + colony.getAllBees().size() == 0)
+            {
+                gameOver = true;
+                clock.stop();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Yaaaay!");
+                    alert.setHeaderText(null);
+                    alert.setContentText("All bees are vanquished. You win!");
+                    alert.showAndWait();
+                    Platform.exit();
+                });
+            }
+        }
+    }
+
+    // -------------------------
+    // RENDERING
+    // -------------------------
+
+    private void render()
+    {
+        gc.setFill(Color.WHITE);
+        gc.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
+        drawAntSelector();
+        drawColony();
+        drawBees();
+        drawLeaves();
+
+        // text
+        String antString = "none";
+        if (selectedAnt != null)
+        {
+            antString = selectedAnt.getClass().getSimpleName();
+            antString = antString.substring(0, antString.length() - 3);
+        }
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", 14));
+        gc.fillText("Ant selected: " + antString, 20, 20);
+        gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn, 20, 140);
+
+        if (!gameStarted)
+        {
+            gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
+            gc.setFill(Color.RED);
+            gc.fillText("CLICK TO START", 350, 550);
+        }
+    }
+
+    private void drawColony()
+    {
+        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet())
+        {
+            double[] rect = entry.getKey();
+            Place place = entry.getValue();
+
+            gc.setStroke(Color.BLACK);
+            gc.strokeRect(rect[0], rect[1], rect[2], rect[3]);
+
+            if (place != tunnelEnd && TUNNEL_IMAGE != null)
+                gc.drawImage(TUNNEL_IMAGE, rect[0], rect[1]);
+
+            Ant ant = place.getAnt();
+            if (ant != null)
+            {
+                Image img = ANT_IMAGES.get(ant.getClass().getName());
+                if (img != null)
+                    gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
+            }
+        }
+    }
+
+    private void drawBees()
+    {
+        for (AnimPosition pos : allBeePositions.values())
+        {
+            if (BEE_IMAGE != null)
+                gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+        }
+    }
+
+    private void drawLeaves()
+    {
+        for (AnimPosition leafPos : leaves)
+        {
+            double angle = leafPos.framesLeft * Math.PI / 8;
+            gc.setFill(leafPos.color != null ? leafPos.color : Color.GREEN);
+            gc.save();
+            gc.translate(leafPos.x, leafPos.y);
+            gc.rotate(Math.toDegrees(angle));
+            gc.fillOval(-LEAF_SIZE / 2, -LEAF_SIZE / 4, LEAF_SIZE, LEAF_SIZE / 2);
+            gc.restore();
+        }
+    }
+
+    private void drawAntSelector()
+    {
+        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet())
+        {
+            double[] rect = entry.getKey();
+            Ant ant = entry.getValue();
+
+            if (ant.getFoodCost() > colony.getFood())
+                gc.setFill(Color.GRAY);
+            else if (ant == selectedAnt)
+                gc.setFill(Color.BLUE);
+            else
+                gc.setFill(Color.WHITE);
+
+            gc.fillRect(rect[0], rect[1], rect[2], rect[3]);
+            gc.setStroke(Color.BLACK);
+            gc.strokeRect(rect[0], rect[1], rect[2], rect[3]);
+
+            Image img = ANT_IMAGES.get(ant.getClass().getName());
+            if (img != null)
+                gc.drawImage(img, rect[0] + PANEL_PAD_W, rect[1] + PANEL_PAD_H);
+
+            gc.setFill(Color.BLACK);
+            gc.setFont(Font.font("SansSerif", 12));
+            gc.fillText("" + ant.getFoodCost(), rect[0] + rect[2] / 2, rect[1] + ANT_IMAGE_HEIGHT + 4 + PANEL_PAD_H);
+        }
+
+        // remover
+        if (selectedAnt == null)
+            gc.setFill(Color.BLUE);
+        else
+            gc.setFill(Color.WHITE);
+        gc.fillRect(removerArea[0], removerArea[1], removerArea[2], removerArea[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(removerArea[0], removerArea[1], removerArea[2], removerArea[3]);
+        if (REMOVER_IMAGE != null)
+            gc.drawImage(REMOVER_IMAGE, removerArea[0] + PANEL_PAD_W, removerArea[1] + PANEL_PAD_H);
+    }
+
+    // -------------------------
+    // CLICK HANDLING
+    // -------------------------
+
+    private synchronized void handleClick(double mouseX, double mouseY)
+    {
+        // check colony areas
+        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet())
+        {
+            double[] rect = entry.getKey();
+            if (contains(rect, mouseX, mouseY))
+            {
+                if (selectedAnt == null)
+                    colony.removeAnt(entry.getValue());
+                else
+                {
+                    Ant deployable = buildAnt(selectedAnt.getClass().getName());
+                    colony.deployAnt(entry.getValue(), deployable);
+                }
+                return;
+            }
+        }
+
+        // check ant selector
+        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet())
+        {
+            double[] rect = entry.getKey();
+            if (contains(rect, mouseX, mouseY))
+            {
+                selectedAnt = entry.getValue();
+                return;
+            }
+        }
+
+        // check remover
+        if (contains(removerArea, mouseX, mouseY))
+        {
+            selectedAnt = null;
+        }
+    }
+
+    private boolean contains(double[] rect, double x, double y)
+    {
+        return x >= rect[0] && x <= rect[0] + rect[2] && y >= rect[1] && y <= rect[1] + rect[3];
+    }
+
+    // -------------------------
+    // ANIMATIONS
+    // -------------------------
+
+    private void startAnimation(Bee b)
+    {
+        AnimPosition anim = allBeePositions.get(b);
+        if (anim == null) return;
+        if (anim.framesLeft == 0)
+        {
+            double[] rect = colonyRects.get(b.getPlace());
+            if (rect != null && !contains(rect, anim.x, anim.y))
+                anim.animateTo((int)(rect[0] + PLACE_PAD_W), (int)(rect[1] + PLACE_PAD_H), FPS * TURN_SECONDS);
+        }
+    }
+
+    private void createLeaf(Ant source, Bee target)
+    {
+        double[] antRect = colonyRects.get(source.getPlace());
+        double[] beeRect = colonyRects.get(target.getPlace());
+        if (antRect == null || beeRect == null) return;
+
+        int startX = (int)(antRect[0] + LEAF_START_X);
+        int startY = (int)(antRect[1] + LEAF_START_Y);
+        int endX = (int)(beeRect[0] + LEAF_END_Y);
+        int endY = (int)(beeRect[1] + LEAF_END_Y);
+
+        AnimPosition leaf = new AnimPosition(startX, startY);
+        leaf.animateTo(endX, endY, (int)(LEAF_SPEED * FPS));
+        leaf.color = LEAF_COLORS.get(source.getClass().getName());
+        leaves.add(leaf);
+    }
+
+    // -------------------------
+    // INITIALIZATION
+    // -------------------------
+
+    private void initializeAnts()
+    {
+        try
+        {
+            Scanner sc = new Scanner(new File(ANT_FILE));
+            while (sc.hasNextLine())
+            {
+                String line = sc.nextLine();
+                if (line.matches("\\w.*"))
+                {
+                    String[] parts = line.split(",");
+                    String antType = ANT_PKG + "." + parts[0].trim();
+                    try
+                    {
+                        Class.forName(antType);
+                        ANT_TYPES.add(antType);
+                        ANT_IMAGES.put(antType, loadImage(parts[1].trim()));
+                        if (parts.length > 2)
+                        {
+                            int rgb = Integer.parseInt(parts[2].trim());
+                            ANT_IMAGES.put(antType + "_color", null);
+                            LEAF_COLORS.put(antType, intToColor(rgb));
+                        }
+                    }
+                    catch (ClassNotFoundException e) {}
+                }
+            }
+            sc.close();
+        }
+        catch (IOException e)
+        {
+            System.out.println("Error loading ant properties: " + e);
+        }
+    }
+
+    private void initializeBees()
+    {
+        Bee[] bees = this.hive.getBees();
+        for (Bee bee : bees)
+        {
+            allBeePositions.put(bee,
+                new AnimPosition(
+                    (int)(HIVE_X + (20 * Math.random() - 10)),
+                    (int)(HIVE_Y + (100 * Math.random() - 50))
+                )
+            );
+        }
+    }
+
+    private void initializeColony()
+    {
+        double posX = PLACE_X;
+        double posY = PLACE_Y;
+        double width = BEE_IMAGE_WIDTH + 2 * PLACE_PAD_W;
+        double height = ANT_IMAGE_HEIGHT + 2 * PLACE_PAD_H;
+        int row = 0;
+        posX += (width + PLACE_MARGIN) / 2;
+
+        for (Place place : colony.getPlaces())
+        {
+            if (place.getExit() == colony.getQueenPlace())
+            {
+                posX = PLACE_X + (width + PLACE_MARGIN) / 2;
+                posY = PLACE_Y + row * (height + PLACE_MARGIN);
+                row++;
+            }
+
+            double[] clickable = {posX, posY, width, height};
+            colonyAreas.put(clickable, place);
+            colonyRects.put(place, clickable);
+            posX += width + PLACE_MARGIN;
+        }
+
+        // queen location
+        double[] queenRect = {0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0};
+        tunnelEnd = colony.getQueenPlace();
+        colonyAreas.put(queenRect, tunnelEnd);
+        colonyRects.put(tunnelEnd, queenRect);
+    }
+
+    private void initializeAntSelector()
+    {
+        double posX = PANEL_X;
+        double posY = PANEL_Y;
+        double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
+        double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
+
+        removerArea = new double[]{posX, posY, width, height};
+        posX += width + 2;
+
+        for (String antType : ANT_TYPES)
+        {
+            double[] clickable = {posX, posY, width, height};
+            Ant ant = buildAnt(antType);
+            if (ant != null)
+                antSelectorAreas.put(clickable, ant);
+            posX += width + 2;
+        }
+    }
+
+    // -------------------------
+    // UTILITIES
+    // -------------------------
+
+    private Image loadImage(String filename)
+    {
+        try
+        {
+            File f = new File(filename);
+            if (f.exists())
+                return new Image(f.toURI().toString());
+        }
+        catch (Exception e)
+        {
+            System.err.println("Error loading image: " + filename);
+        }
+        return null;
+    }
+
+    private Color intToColor(int rgb)
+    {
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        return Color.rgb(r, g, b);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Ant buildAnt(String antType)
+    {
+        try
+        {
+            Class antClass = Class.forName(antType);
+            Constructor constructor = antClass.getConstructor();
+            return (Ant) constructor.newInstance();
+        }
+        catch (Exception e) {}
+        return null;
+    }
+
+    // -------------------------
+    // ANIMATION HELPER CLASS
+    // -------------------------
+
+    private static class AnimPosition
+    {
+        double x, y;
+        double dx, dy;
+        int framesLeft;
+        Color color;
+
+        public AnimPosition(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        public void step()
+        {
+            x += dx;
+            y += dy;
+            framesLeft--;
+        }
+
+        public void animateTo(int nx, int ny, int frames)
+        {
+            framesLeft = frames;
+            dx = (nx - x) / framesLeft;
+            dy = (ny - y) / framesLeft;
+        }
+    }
 }
