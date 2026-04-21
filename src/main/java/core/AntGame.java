@@ -14,9 +14,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -477,9 +477,15 @@ public class AntGame
 
     private void initializeAnts()
     {
-        try
+        InputStream antStream = AntGame.class.getClassLoader().getResourceAsStream(ANT_FILE);
+        if (antStream == null)
         {
-            Scanner sc = new Scanner(new File(ANT_FILE));
+            System.out.println("Error loading ant properties: resource not found: " + ANT_FILE);
+            return;
+        }
+
+        try (Scanner sc = new Scanner(antStream, StandardCharsets.UTF_8))
+        {
             while (sc.hasNextLine())
             {
                 String line = sc.nextLine();
@@ -502,11 +508,6 @@ public class AntGame
                     catch (ClassNotFoundException e) {}
                 }
             }
-            sc.close();
-        }
-        catch (IOException e)
-        {
-            System.out.println("Error loading ant properties: " + e);
         }
     }
 
@@ -581,16 +582,16 @@ public class AntGame
 
     private Image loadImage(String filename)
     {
-        try
+        try (InputStream imageStream = AntGame.class.getClassLoader().getResourceAsStream(filename))
         {
-            File f = new File(filename);
-            if (f.exists())
-                return new Image(f.toURI().toString());
+            if (imageStream != null)
+                return new Image(imageStream);
         }
         catch (Exception e)
         {
             System.err.println("Error loading image: " + filename);
         }
+        System.err.println("Image resource not found: " + filename);
         return null;
     }
 

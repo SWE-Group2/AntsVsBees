@@ -7,54 +7,61 @@ The repository currently contains a working core game loop, JavaFX GUI, bee inva
 - `HarvesterAnt`
 - `ThrowerAnt`
 
-Only ant classes that exist in `src/ants` are loaded into the in-game selector, so the game will run even though `antlist.properties` lists additional ant types that have not been implemented yet.
+Only ant classes that exist in `src/main/java/ants` are loaded into the in-game selector, so the game will run even though `antlist.properties` lists additional ant types that have not been implemented yet.
 
 ## Project Structure
 
 ```text
 AVB/
+├── pom.xml
 ├── src/
-│   ├── ants/        # Concrete ant implementations
-│   └── core/        # Core game engine, model, and JavaFX UI
-├── img/             # Sprite and UI image assets
-├── lib/             # JavaFX and other bundled JAR/native libraries
-├── antlist.properties
-├── runfx.sh
+│   ├── main/
+│   │   ├── java/       # Application source
+│   │   └── resources/  # Images and ant configuration
+│   └── test/
+│       └── java/       # JUnit tests
 └── README.md
 ```
 
 ## Requirements
 
-- A JDK with `java` and `javac` available on your path
-- JavaFX libraries are already bundled in `lib/`
+- JDK 25
+- Maven 3.9+
 
 Notes:
 
-- The Eclipse project metadata is configured for `JavaSE-25` in `.classpath`.
-- The project compiled successfully from source with the bundled dependencies.
+- The Maven build now manages JavaFX and JUnit dependencies.
+- The project no longer relies on checked-in IDE metadata or local `lib/` jars.
 
 ## Build
 
 From the project root:
 
 ```bash
-mkdir -p bin
-javac --module-path lib --add-modules javafx.controls,javafx.fxml -cp "lib/*" -d bin $(find src -name '*.java')
+mvn compile
 ```
 
 ## Run
 
-After compiling, launch the game with:
+Start the JavaFX application with:
 
 ```bash
-./runfx.sh
+mvn javafx:run
 ```
 
-Equivalent command:
+## Test
+
+The repository includes JUnit 5 tests for the game model and currently implemented ant types.
+
+Run the full suite from the project root with:
 
 ```bash
-java -cp "bin:lib/*" --module-path lib --add-modules javafx.controls,javafx.fxml core.AntsVsSomeBees
+mvn test
 ```
+
+The GitHub Actions workflow at `.github/workflows/test.yml` runs `mvn -B test` on every pull request targeting `main`.
+
+If VS Code still shows stale Java errors after pulling these changes, reload the window or run `Java: Clean Java Language Server Workspace` so it re-imports the Maven project from `pom.xml`.
 
 ## Gameplay
 
@@ -85,30 +92,30 @@ java -cp "bin:lib/*" --module-path lib --add-modules javafx.controls,javafx.fxml
 
 ## Configuration
 
-`antlist.properties` defines ant classes, image assets, and optional projectile colors for the UI. The game attempts to load each listed ant class reflectively from the `ants` package. If a class is missing, it is skipped silently.
+`src/main/resources/antlist.properties` defines ant classes, image assets, and optional projectile colors for the UI. The game loads this file and the image assets from the classpath, then attempts to load each listed ant class reflectively from the `ants` package. If a class is missing, it is skipped silently.
 
 This makes the file useful as a simple extension point:
 
-1. Add a new ant class under `src/ants/`
-2. Add its entry to `antlist.properties`
-3. Recompile and run the game
+1. Add a new ant class under `src/main/java/ants/`
+2. Add its entry to `src/main/resources/antlist.properties`
+3. Run `mvn test` or `mvn javafx:run`
 
 ## Main Entry Points
 
-- [`src/core/AntsVsSomeBees.java`](src/core/AntsVsSomeBees.java): JavaFX application launcher
-- [`src/core/AntGame.java`](src/core/AntGame.java): game loop, rendering, input handling, and reflective ant loading
-- [`src/core/AntColony.java`](src/core/AntColony.java): colony layout, food management, and insect lookup
-- [`src/core/Hive.java`](src/core/Hive.java): bee wave scheduling and invasion logic
+- [`src/main/java/core/AntsVsSomeBees.java`](src/main/java/core/AntsVsSomeBees.java): JavaFX application launcher
+- [`src/main/java/core/AntGame.java`](src/main/java/core/AntGame.java): game loop, rendering, input handling, and reflective ant loading
+- [`src/main/java/core/AntColony.java`](src/main/java/core/AntColony.java): colony layout, food management, and insect lookup
+- [`src/main/java/core/Hive.java`](src/main/java/core/Hive.java): bee wave scheduling and invasion logic
 
 ## Current Status
 
 What works:
 
-- Source compiles successfully
+- Source and tests are structured for Maven
 - JavaFX launcher and GUI code are present
 - Bee waves, ant placement, food tracking, and win/loss conditions are implemented
 
 What is still partial:
 
-- Most ant types referenced in `antlist.properties` are not implemented in `src/ants`
-- There are no automated tests in the repository yet
+- Most ant types referenced in `antlist.properties` are not implemented in `src/main/java/ants`
+- The current test coverage focuses on the model layer rather than the JavaFX UI
