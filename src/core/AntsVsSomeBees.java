@@ -1,16 +1,23 @@
 package core;
 
+import javafx.application.Application;
+import javafx.stage.Stage;
+
 /**
  * A driver for the Ants vs. Some-Bees game
  */
-public class AntsVsSomeBees
+public class AntsVsSomeBees extends Application
 {
-	public static void main(String[] args)
-	{
-		AntColony colony = new AntColony(3, 8, 0, 2); //specify the colony [tunnels, length, moats, food]
-		//Hive hive = Hive.makeTestHive(); //specify the attackers (the hive)
-		Hive hive = Hive.makeFullHive();
-		//Hive hive = Hive.makeInsaneHive();
-		new AntGame(colony,hive); //launch the game
-	}
+    @Override
+    public void start(Stage primaryStage)
+    {
+        AntColony colony = new AntColony(3, 8, 0, 2);
+        Hive hive = Hive.makeFullHive();
+        new AntGame(colony, hive, primaryStage);
+    }
+
+    public static void main(String[] args)
+    {
+        launch(args);
+    }
 }
