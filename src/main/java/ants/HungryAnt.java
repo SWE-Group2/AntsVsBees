@@ -11,7 +11,7 @@ import core.Bee;
  * 
  * Food Cost: 4, Armor: 1
  * 
- * @author YOUR NAME HERE
+ * @author muhammad hassan
  */
 public class HungryAnt extends Ant
 {
