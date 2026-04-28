@@ -29,13 +29,13 @@ import ants.ThrowerAnt;
  * A class that controls the graphical game of Ants vs. Some-Bees.
  * Converted from Swing to JavaFX.
  */
-public class AntGame
-{
+public class AntGame {
     // game models
     private AntColony colony;
     private Hive hive;
     private static final String ANT_FILE = "antlist.properties";
     private static final String ANT_PKG = "ants";
+    private static final String WATER_PLACE_CLASS_NAME = "places.WaterPlace";
 
     // game clock & speed
     public static final int FPS = 30;
@@ -53,6 +53,7 @@ public class AntGame
 
     // images
     private final Image TUNNEL_IMAGE = loadImage("img/tunnel.gif");
+    private final Image WATER_TUNNEL_IMAGE = loadImage("img/water-tunnel.png");
     private final Image BEE_IMAGE = loadImage("img/bee.gif");
     private final Image REMOVER_IMAGE = loadImage("img/remover.gif");
 
@@ -101,8 +102,7 @@ public class AntGame
     /**
      * Creates a new AntGame with JavaFX rendering
      */
-    public AntGame(AntColony colony, Hive hive, Stage stage)
-    {
+    public AntGame(AntColony colony, Hive hive, Stage stage) {
         this.colony = colony;
         this.hive = hive;
         this.frameCount = 0;
@@ -144,7 +144,8 @@ public class AntGame
         stage.setScene(scene);
         stage.setResizable(false);
         stage.setOnCloseRequest(e -> {
-            if (clock != null) clock.stop();
+            if (clock != null)
+                clock.stop();
             Platform.exit();
         });
         stage.show();
@@ -172,19 +173,16 @@ public class AntGame
     // GAME LOGIC
     // -------------------------
 
-    private void nextFrame()
-    {
-        if (gameOver) return;
+    private void nextFrame() {
+        if (gameOver)
+            return;
 
-        if (frameCount == 0)
-        {
+        if (frameCount == 0) {
             System.out.println("TURN: " + turn);
 
             // ants act
-            for (Ant ant : colony.getAllAnts())
-            {
-                if (ant instanceof ThrowerAnt)
-                {
+            for (Ant ant : colony.getAllAnts()) {
+                if (ant instanceof ThrowerAnt) {
                     Bee target = ((ThrowerAnt) ant).getTarget();
                     if (target != null)
                         createLeaf(ant, target);
@@ -193,8 +191,7 @@ public class AntGame
             }
 
             // bees act
-            for (Bee bee : colony.getAllBees())
-            {
+            for (Bee bee : colony.getAllBees()) {
                 bee.action(colony);
                 startAnimation(bee);
             }
@@ -205,12 +202,9 @@ public class AntGame
                 startAnimation(bee);
         }
 
-        if (frameCount == (int)(LEAF_SPEED * FPS))
-        {
-            for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet())
-            {
-                if (entry.getKey().getArmor() <= 0)
-                {
+        if (frameCount == (int) (LEAF_SPEED * FPS)) {
+            for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
+                if (entry.getKey().getArmor() <= 0) {
                     AnimPosition pos = entry.getValue();
                     pos.animateTo((int) pos.x, (int) CRYPT_HEIGHT, FPS * TURN_SECONDS);
                 }
@@ -218,13 +212,12 @@ public class AntGame
         }
 
         // step animations
-        for (AnimPosition pos : allBeePositions.values())
-        {
-            if (pos.framesLeft > 0) pos.step();
+        for (AnimPosition pos : allBeePositions.values()) {
+            if (pos.framesLeft > 0)
+                pos.step();
         }
         Iterator<AnimPosition> iter = leaves.iterator();
-        while (iter.hasNext())
-        {
+        while (iter.hasNext()) {
             AnimPosition leaf = iter.next();
             if (leaf.framesLeft > 0)
                 leaf.step();
@@ -235,17 +228,14 @@ public class AntGame
         render();
 
         frameCount++;
-        if (frameCount == FPS * TURN_SECONDS)
-        {
+        if (frameCount == FPS * TURN_SECONDS) {
             turn++;
             frameCount = 0;
         }
 
         // check end conditions halfway through turn
-        if (frameCount == (int)(TURN_SECONDS * FPS / 2))
-        {
-            if (colony.queenHasBees())
-            {
+        if (frameCount == (int) (TURN_SECONDS * FPS / 2)) {
+            if (colony.queenHasBees()) {
                 gameOver = true;
                 clock.stop();
                 Platform.runLater(() -> {
@@ -256,9 +246,7 @@ public class AntGame
                     alert.showAndWait();
                     Platform.exit();
                 });
-            }
-            else if (hive.getBees().length + colony.getAllBees().size() == 0)
-            {
+            } else if (hive.getBees().length + colony.getAllBees().size() == 0) {
                 gameOver = true;
                 clock.stop();
                 Platform.runLater(() -> {
@@ -277,8 +265,7 @@ public class AntGame
     // RENDERING
     // -------------------------
 
-    private void render()
-    {
+    private void render() {
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
 
@@ -289,8 +276,7 @@ public class AntGame
 
         // text
         String antString = "none";
-        if (selectedAnt != null)
-        {
+        if (selectedAnt != null) {
             antString = selectedAnt.getClass().getSimpleName();
             antString = antString.substring(0, antString.length() - 3);
         }
@@ -299,30 +285,32 @@ public class AntGame
         gc.fillText("Ant selected: " + antString, 20, 20);
         gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn, 20, 140);
 
-        if (!gameStarted)
-        {
+        if (!gameStarted) {
             gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
             gc.setFill(Color.RED);
             gc.fillText("CLICK TO START", 350, 550);
         }
     }
 
-    private void drawColony()
-    {
-        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet())
-        {
+    private void drawColony() {
+        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
             double[] rect = entry.getKey();
             Place place = entry.getValue();
 
             gc.setStroke(Color.BLACK);
             gc.strokeRect(rect[0], rect[1], rect[2], rect[3]);
 
-            if (place != tunnelEnd && TUNNEL_IMAGE != null)
-                gc.drawImage(TUNNEL_IMAGE, rect[0], rect[1]);
+            if (place != tunnelEnd && TUNNEL_IMAGE != null) {
+                if (place.getClass().getName() == WATER_PLACE_CLASS_NAME) {
+                    gc.drawImage(WATER_TUNNEL_IMAGE, rect[0], rect[1]);
+                } else {
+                    gc.drawImage(TUNNEL_IMAGE, rect[0], rect[1]);
+                }
+
+            }
 
             Ant ant = place.getAnt();
-            if (ant != null)
-            {
+            if (ant != null) {
                 Image img = ANT_IMAGES.get(ant.getClass().getName());
                 if (img != null)
                     gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
@@ -330,19 +318,15 @@ public class AntGame
         }
     }
 
-    private void drawBees()
-    {
-        for (AnimPosition pos : allBeePositions.values())
-        {
+    private void drawBees() {
+        for (AnimPosition pos : allBeePositions.values()) {
             if (BEE_IMAGE != null)
                 gc.drawImage(BEE_IMAGE, pos.x, pos.y);
         }
     }
 
-    private void drawLeaves()
-    {
-        for (AnimPosition leafPos : leaves)
-        {
+    private void drawLeaves() {
+        for (AnimPosition leafPos : leaves) {
             double angle = leafPos.framesLeft * Math.PI / 8;
             gc.setFill(leafPos.color != null ? leafPos.color : Color.GREEN);
             gc.save();
@@ -353,10 +337,8 @@ public class AntGame
         }
     }
 
-    private void drawAntSelector()
-    {
-        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet())
-        {
+    private void drawAntSelector() {
+        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet()) {
             double[] rect = entry.getKey();
             Ant ant = entry.getValue();
 
@@ -396,18 +378,14 @@ public class AntGame
     // CLICK HANDLING
     // -------------------------
 
-    private synchronized void handleClick(double mouseX, double mouseY)
-    {
+    private synchronized void handleClick(double mouseX, double mouseY) {
         // check colony areas
-        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet())
-        {
+        for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
             double[] rect = entry.getKey();
-            if (contains(rect, mouseX, mouseY))
-            {
+            if (contains(rect, mouseX, mouseY)) {
                 if (selectedAnt == null)
                     colony.removeAnt(entry.getValue());
-                else
-                {
+                else {
                     Ant deployable = buildAnt(selectedAnt.getClass().getName());
                     colony.deployAnt(entry.getValue(), deployable);
                 }
@@ -416,25 +394,21 @@ public class AntGame
         }
 
         // check ant selector
-        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet())
-        {
+        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet()) {
             double[] rect = entry.getKey();
-            if (contains(rect, mouseX, mouseY))
-            {
+            if (contains(rect, mouseX, mouseY)) {
                 selectedAnt = entry.getValue();
                 return;
             }
         }
 
         // check remover
-        if (contains(removerArea, mouseX, mouseY))
-        {
+        if (contains(removerArea, mouseX, mouseY)) {
             selectedAnt = null;
         }
     }
 
-    private boolean contains(double[] rect, double x, double y)
-    {
+    private boolean contains(double[] rect, double x, double y) {
         return x >= rect[0] && x <= rect[0] + rect[2] && y >= rect[1] && y <= rect[1] + rect[3];
     }
 
@@ -442,31 +416,30 @@ public class AntGame
     // ANIMATIONS
     // -------------------------
 
-    private void startAnimation(Bee b)
-    {
+    private void startAnimation(Bee b) {
         AnimPosition anim = allBeePositions.get(b);
-        if (anim == null) return;
-        if (anim.framesLeft == 0)
-        {
+        if (anim == null)
+            return;
+        if (anim.framesLeft == 0) {
             double[] rect = colonyRects.get(b.getPlace());
             if (rect != null && !contains(rect, anim.x, anim.y))
-                anim.animateTo((int)(rect[0] + PLACE_PAD_W), (int)(rect[1] + PLACE_PAD_H), FPS * TURN_SECONDS);
+                anim.animateTo((int) (rect[0] + PLACE_PAD_W), (int) (rect[1] + PLACE_PAD_H), FPS * TURN_SECONDS);
         }
     }
 
-    private void createLeaf(Ant source, Bee target)
-    {
+    private void createLeaf(Ant source, Bee target) {
         double[] antRect = colonyRects.get(source.getPlace());
         double[] beeRect = colonyRects.get(target.getPlace());
-        if (antRect == null || beeRect == null) return;
+        if (antRect == null || beeRect == null)
+            return;
 
-        int startX = (int)(antRect[0] + LEAF_START_X);
-        int startY = (int)(antRect[1] + LEAF_START_Y);
-        int endX = (int)(beeRect[0] + LEAF_END_Y);
-        int endY = (int)(beeRect[1] + LEAF_END_Y);
+        int startX = (int) (antRect[0] + LEAF_START_X);
+        int startY = (int) (antRect[1] + LEAF_START_Y);
+        int endX = (int) (beeRect[0] + LEAF_END_Y);
+        int endY = (int) (beeRect[1] + LEAF_END_Y);
 
         AnimPosition leaf = new AnimPosition(startX, startY);
-        leaf.animateTo(endX, endY, (int)(LEAF_SPEED * FPS));
+        leaf.animateTo(endX, endY, (int) (LEAF_SPEED * FPS));
         leaf.color = LEAF_COLORS.get(source.getClass().getName());
         leaves.add(leaf);
     }
@@ -475,58 +448,46 @@ public class AntGame
     // INITIALIZATION
     // -------------------------
 
-    private void initializeAnts()
-    {
+    private void initializeAnts() {
         InputStream antStream = AntGame.class.getClassLoader().getResourceAsStream(ANT_FILE);
-        if (antStream == null)
-        {
+        if (antStream == null) {
             System.out.println("Error loading ant properties: resource not found: " + ANT_FILE);
             return;
         }
 
-        try (Scanner sc = new Scanner(antStream, StandardCharsets.UTF_8))
-        {
-            while (sc.hasNextLine())
-            {
+        try (Scanner sc = new Scanner(antStream, StandardCharsets.UTF_8)) {
+            while (sc.hasNextLine()) {
                 String line = sc.nextLine();
-                if (line.matches("\\w.*"))
-                {
+                if (line.matches("\\w.*")) {
                     String[] parts = line.split(",");
                     String antType = ANT_PKG + "." + parts[0].trim();
-                    try
-                    {
+                    try {
                         Class.forName(antType);
                         ANT_TYPES.add(antType);
                         ANT_IMAGES.put(antType, loadImage(parts[1].trim()));
-                        if (parts.length > 2)
-                        {
+                        if (parts.length > 2) {
                             int rgb = Integer.parseInt(parts[2].trim());
                             ANT_IMAGES.put(antType + "_color", null);
                             LEAF_COLORS.put(antType, intToColor(rgb));
                         }
+                    } catch (ClassNotFoundException e) {
                     }
-                    catch (ClassNotFoundException e) {}
                 }
             }
         }
     }
 
-    private void initializeBees()
-    {
+    private void initializeBees() {
         Bee[] bees = this.hive.getBees();
-        for (Bee bee : bees)
-        {
+        for (Bee bee : bees) {
             allBeePositions.put(bee,
-                new AnimPosition(
-                    (int)(HIVE_X + (20 * Math.random() - 10)),
-                    (int)(HIVE_Y + (100 * Math.random() - 50))
-                )
-            );
+                    new AnimPosition(
+                            (int) (HIVE_X + (20 * Math.random() - 10)),
+                            (int) (HIVE_Y + (100 * Math.random() - 50))));
         }
     }
 
-    private void initializeColony()
-    {
+    private void initializeColony() {
         double posX = PLACE_X;
         double posY = PLACE_Y;
         double width = BEE_IMAGE_WIDTH + 2 * PLACE_PAD_W;
@@ -534,41 +495,37 @@ public class AntGame
         int row = 0;
         posX += (width + PLACE_MARGIN) / 2;
 
-        for (Place place : colony.getPlaces())
-        {
-            if (place.getExit() == colony.getQueenPlace())
-            {
+        for (Place place : colony.getPlaces()) {
+            if (place.getExit() == colony.getQueenPlace()) {
                 posX = PLACE_X + (width + PLACE_MARGIN) / 2;
                 posY = PLACE_Y + row * (height + PLACE_MARGIN);
                 row++;
             }
 
-            double[] clickable = {posX, posY, width, height};
+            double[] clickable = { posX, posY, width, height };
             colonyAreas.put(clickable, place);
             colonyRects.put(place, clickable);
             posX += width + PLACE_MARGIN;
         }
 
         // queen location
-        double[] queenRect = {0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0};
+        double[] queenRect = { 0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0 };
         tunnelEnd = colony.getQueenPlace();
         colonyAreas.put(queenRect, tunnelEnd);
         colonyRects.put(tunnelEnd, queenRect);
     }
 
-    private void initializeAntSelector()
-    {
+    private void initializeAntSelector() {
         double posX = PANEL_X;
         double posY = PANEL_Y;
         double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
         double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
 
-        removerArea = new double[]{posX, posY, width, height};
+        removerArea = new double[] { posX, posY, width, height };
         posX += width + 2;
 
-        for (String antType : ANT_TYPES)
-        {
-            double[] clickable = {posX, posY, width, height};
+        for (String antType : ANT_TYPES) {
+            double[] clickable = { posX, posY, width, height };
             Ant ant = buildAnt(antType);
             if (ant != null)
                 antSelectorAreas.put(clickable, ant);
@@ -580,39 +537,32 @@ public class AntGame
     // UTILITIES
     // -------------------------
 
-    private Image loadImage(String filename)
-    {
-        try (InputStream imageStream = AntGame.class.getClassLoader().getResourceAsStream(filename))
-        {
+    private Image loadImage(String filename) {
+        try (InputStream imageStream = AntGame.class.getClassLoader().getResourceAsStream(filename)) {
             if (imageStream != null)
                 return new Image(imageStream);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             System.err.println("Error loading image: " + filename);
         }
         System.err.println("Image resource not found: " + filename);
         return null;
     }
 
-    private Color intToColor(int rgb)
-    {
+    private Color intToColor(int rgb) {
         int r = (rgb >> 16) & 0xFF;
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;
         return Color.rgb(r, g, b);
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private Ant buildAnt(String antType)
-    {
-        try
-        {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private Ant buildAnt(String antType) {
+        try {
             Class antClass = Class.forName(antType);
             Constructor constructor = antClass.getConstructor();
             return (Ant) constructor.newInstance();
+        } catch (Exception e) {
         }
-        catch (Exception e) {}
         return null;
     }
 
@@ -620,28 +570,24 @@ public class AntGame
     // ANIMATION HELPER CLASS
     // -------------------------
 
-    private static class AnimPosition
-    {
+    private static class AnimPosition {
         double x, y;
         double dx, dy;
         int framesLeft;
         Color color;
 
-        public AnimPosition(int x, int y)
-        {
+        public AnimPosition(int x, int y) {
             this.x = x;
             this.y = y;
         }
 
-        public void step()
-        {
+        public void step() {
             x += dx;
             y += dy;
             framesLeft--;
         }
 
-        public void animateTo(int nx, int ny, int frames)
-        {
+        public void animateTo(int nx, int ny, int frames) {
             framesLeft = frames;
             dx = (nx - x) / framesLeft;
             dy = (ny - y) / framesLeft;
