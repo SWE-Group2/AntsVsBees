@@ -5,10 +5,13 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.function.BiConsumer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -17,11 +20,17 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import places.WaterPlace;
+import save.BeeState;
+import save.GameSnapshot;
+import save.PlacedAnt;
+import save.WaveSpec;
 
 /**
  * A class that controls the graphical game of Ants vs. Some-Bees. Converted from Swing to JavaFX.
@@ -96,12 +105,17 @@ public class AntGame {
   private boolean gameStarted = false;
   private boolean gameOver = false;
 
+  // Saving callback
+  private final BiConsumer<String, GameSnapshot> onSaveRequested;
+
   /** Creates a new AntGame with JavaFX rendering */
-  public AntGame(AntColony colony, Hive hive, Stage stage) {
+  public AntGame(
+      AntColony colony, Hive hive, Stage stage, BiConsumer<String, GameSnapshot> saveRequested) {
     this.colony = colony;
     this.hive = hive;
     this.frameCount = 0;
     this.turn = 0;
+    this.onSaveRequested = saveRequested;
 
     ANT_TYPES = new ArrayList<>();
     ANT_IMAGES = new HashMap<>();
@@ -135,6 +149,17 @@ public class AntGame {
 
     Pane root = new Pane(canvas);
     Scene scene = new Scene(root, FRAME_WIDTH, FRAME_HEIGHT);
+    // TODO: refactor to have buttons at the bottom of the page
+    scene.setOnKeyPressed(
+        e -> {
+          if (e.getCode() == KeyCode.S && gameStarted && !gameOver) {
+            if (onSaveRequested != null) {
+              GameSnapshot snapshot = capture();
+              System.out.println("[SAVE] " + snapshot);
+              onSaveRequested.accept("save-turn-" + turn, snapshot);
+            }
+          }
+        });
 
     stage.setTitle("Ants vs. Some-Bees");
     stage.setScene(scene);
@@ -548,6 +573,53 @@ public class AntGame {
     } catch (Exception e) {
     }
     return null;
+  }
+
+  // capture current state
+  public GameSnapshot capture() {
+    List<PlacedAnt> ants =
+        colony.getAllAnts().stream()
+            .map(a -> new PlacedAnt(a.getPlace().getName(), a.getClass().getName()))
+            .toList();
+    List<BeeState> bees =
+        colony.getAllBees().stream()
+            .map(
+                b ->
+                    new BeeState(
+                        b.getPlace().getName(),
+                        b.getArmor(),
+                        b.getSlowedTurns(),
+                        b.getStunnedTurns()))
+            .toList();
+    List<WaveSpec> remaining = hive.getRemainingWaves(turn);
+    List<String> water =
+        Arrays.stream(colony.getPlaces())
+            .filter(p -> p instanceof WaterPlace)
+            .map(Place::getName)
+            .toList();
+
+    int numTunnels = colony.getBeeEntrances().length;
+    int tunnelLength = colony.getPlaces().length / numTunnels;
+
+    return new GameSnapshot(
+        numTunnels,
+        tunnelLength,
+        water,
+        colony.getFood(),
+        turn,
+        ants,
+        bees,
+        remaining,
+        hive.getBeeArmor());
+  }
+
+  // reconstruct from snapshot — alternative constructor
+  public static AntGame fromSnapshot(
+      GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
+    // TODO: This needs fleshing out with rebuilding game play
+    AntColony colony = new AntColony(3, 8, 3, 2);
+    Hive hive = Hive.makeFullHive();
+    return new AntGame(colony, hive, stage, onSave);
   }
 
   // -------------------------

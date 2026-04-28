@@ -3,6 +3,7 @@ package core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import save.WaveSpec;
 
 /**
  * Represents a hive--which contains the bees that will attack!
@@ -64,6 +65,16 @@ public class Hive extends Place {
     waves.put(attackTime, bees);
   }
 
+  public java.util.List<WaveSpec> getRemainingWaves(int currentTurn) {
+    java.util.List<WaveSpec> out = new java.util.ArrayList<>();
+    for (java.util.Map.Entry<Integer, Bee[]> e : waves.entrySet()) {
+      if (e.getKey() > currentTurn) {
+        out.add(new WaveSpec(e.getKey(), e.getValue().length));
+      }
+    }
+    return out;
+  }
+
   /**
    * Returns an array of all the bees who are part of the attack (whether they are currently in the
    * hive or not!)
@@ -76,6 +87,15 @@ public class Hive extends Place {
       for (int i = 0; i < wave.length; i++) bees.add(wave[i]);
     }
     return bees.toArray(new Bee[0]);
+  }
+
+  /**
+   * Returns the armor that bees in this hive are created with.
+   *
+   * @return the bee armor template
+   */
+  public int getBeeArmor() {
+    return beeArmor;
   }
 
   /////////////////////////////////
