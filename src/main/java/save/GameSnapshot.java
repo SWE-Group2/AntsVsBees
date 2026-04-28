@@ -3,7 +3,7 @@ package save;
 import java.util.List;
 
 public record GameSnapshot(
-    int numTunnels, 
+    int numTunnels,
     int tunnelLength,
     List<String> waterPlaceNames,
     int food,
@@ -11,5 +11,4 @@ public record GameSnapshot(
     List<PlacedAnt> ants,
     List<BeeState> bees,
     List<WaveSpec> remainingWaves,
-    int beeArmorTemplate
-) {}
+    int beeArmorTemplate) {}

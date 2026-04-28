@@ -117,13 +117,11 @@ public class Bee extends Insect {
     if (this.stunnedTurns > 0) this.stunnedTurns -= 1;
   }
 
-  public int getSlowedTurns()  
-	{ 
-		return slowedTurns;  
-	}
-	
-	public int getStunnedTurns() 
-	{ 
-		return stunnedTurns; 
-	}
+  public int getSlowedTurns() {
+    return slowedTurns;
+  }
+
+  public int getStunnedTurns() {
+    return stunnedTurns;
+  }
 }

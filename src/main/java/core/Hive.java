@@ -3,7 +3,6 @@ package core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
 import save.WaveSpec;
 
 /**
@@ -66,17 +65,15 @@ public class Hive extends Place {
     waves.put(attackTime, bees);
   }
 
-  public java.util.List<WaveSpec> getRemainingWaves(int currentTurn) 
-	{
-		java.util.List<WaveSpec> out = new java.util.ArrayList<>();
-		for (java.util.Map.Entry<Integer, Bee[]> e : waves.entrySet()) 
-		{
-			if (e.getKey() > currentTurn) {
-				out.add(new WaveSpec(e.getKey(), e.getValue().length));
-			}
-		}
-		return out;
-	}
+  public java.util.List<WaveSpec> getRemainingWaves(int currentTurn) {
+    java.util.List<WaveSpec> out = new java.util.ArrayList<>();
+    for (java.util.Map.Entry<Integer, Bee[]> e : waves.entrySet()) {
+      if (e.getKey() > currentTurn) {
+        out.add(new WaveSpec(e.getKey(), e.getValue().length));
+      }
+    }
+    return out;
+  }
 
   /**
    * Returns an array of all the bees who are part of the attack (whether they are currently in the
@@ -93,13 +90,13 @@ public class Hive extends Place {
   }
 
   /**
-	 * Returns the armor that bees in this hive are created with.
-	 * @return the bee armor template
-	 */
-	public int getBeeArmor() 
-	{
-		return beeArmor;
-	}
+   * Returns the armor that bees in this hive are created with.
+   *
+   * @return the bee armor template
+   */
+  public int getBeeArmor() {
+    return beeArmor;
+  }
 
   /////////////////////////////////
   // Convenience factory methods //

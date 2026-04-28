@@ -4,3 +4,4 @@ bin/
 .env
 target/
 *.dat
+.DS_Store
