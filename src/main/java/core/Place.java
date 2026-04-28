@@ -15,11 +15,6 @@ public class Place
     private ArrayList<Bee> bees;
     private Ant ant;
 
-    /**
-     * Creates a new place with the given name and exit
-     * @param name The place's name
-     * @param exit The place's exit
-     */
     public Place(String name, Place exit)
     {
         this.name = name;
@@ -29,20 +24,11 @@ public class Place
         this.ant = null;
     }
 
-    /**
-     * Creates a new place with the given name
-     * @param name The place's name
-     */
     public Place(String name)
     {
         this(name, null);
     }
 
-    /**
-     * Returns the place's ant.
-     * If a BodyguardAnt is here, returns the BodyguardAnt (it takes hits first).
-     * @return the place's ant
-     */
     public Ant getAnt()
     {
         return ant;
@@ -57,25 +43,14 @@ public class Place
      */
     public boolean canAddInsect(Insect insect)
     {
-        // normal places accept all insects
         return true;
     }
 
-    /**
-     * Returns an array of the place's bees
-     * @return an array of the place's bees
-     */
     public Bee[] getBees()
     {
         return bees.toArray(new Bee[0]);
     }
 
-    /**
-     * Returns a nearby bee, up to the maxDistance ahead.
-     * @param minDistance The minimum distance away
-     * @param maxDistance The maximum distance away
-     * @return A random nearby bee.
-     */
     public Bee getClosestBee(int minDistance, int maxDistance)
     {
         Place p = this;
@@ -88,37 +63,21 @@ public class Place
         return null;
     }
 
-    /**
-     * Returns the name of the place
-     * @return the name of the place
-     */
     public String getName()
     {
         return name;
     }
 
-    /**
-     * Returns the exit of the place
-     * @return the exit of the place
-     */
     public Place getExit()
     {
         return exit;
     }
 
-    /**
-     * Sets the entrance to the place
-     * @param entrance The entrance to the place
-     */
     public void setEntrance(Place entrance)
     {
         this.entrance = entrance;
     }
 
-    /**
-     * Returns the entrance to the place
-     * @return the entrance to the place
-     */
     public Place getEntrance()
     {
         return this.entrance;
@@ -142,10 +101,9 @@ public class Place
         else if (ant instanceof ants.BodyguardAnt)
         {
             // adding a BodyguardAnt on top of an existing ant
-            // BodyguardAnt wraps around and protects the existing ant
             ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) ant;
-            bodyguard.setContainedAnt(this.ant); // save the existing ant inside bodyguard
-            this.ant = bodyguard; // bodyguard is now the main ant in this place
+            bodyguard.setContainedAnt(this.ant);
+            this.ant = bodyguard;
             bodyguard.setPlace(this);
             System.out.println("BodyguardAnt is now protecting " + bodyguard.getContainedAnt());
         }
@@ -155,7 +113,7 @@ public class Place
             ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) this.ant;
             if (bodyguard.getContainedAnt() == null)
             {
-                bodyguard.setContainedAnt(ant); // store new ant inside bodyguard
+                bodyguard.setContainedAnt(ant);
                 ant.setPlace(this);
                 System.out.println("BodyguardAnt is now protecting " + ant);
             }
@@ -166,15 +124,10 @@ public class Place
         }
         else
         {
-            // two normal ants trying to share - not allowed
             System.out.println("Already an ant in " + this);
         }
     }
 
-    /**
-     * Adds a bee to the place
-     * @param bee The bee to add to the place.
-     */
     public void addInsect(Bee bee)
     {
         bees.add(bee);
@@ -191,13 +144,11 @@ public class Place
     {
         if (this.ant == ant)
         {
-            // removing the main ant
             if (this.ant instanceof ants.BodyguardAnt)
             {
-                // if a BodyguardAnt dies, the ant it was protecting takes its place
                 ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) this.ant;
                 Ant protected_ant = bodyguard.getContainedAnt();
-                this.ant = protected_ant; // protected ant is now exposed
+                this.ant = protected_ant;
                 if (protected_ant != null)
                 {
                     protected_ant.setPlace(this);
@@ -207,7 +158,6 @@ public class Place
             }
             else
             {
-                // normal ant removal
                 this.ant = null;
                 ant.setPlace(null);
             }
@@ -218,10 +168,6 @@ public class Place
         }
     }
 
-    /**
-     * Removes the bee from the place.
-     * @param bee The bee to remove from the place.
-     */
     public void removeInsect(Bee bee)
     {
         if(bees.contains(bee))
