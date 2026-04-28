@@ -20,5 +20,8 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Check code formatting (Spotless)
+        run: mvn -B spotless:check
+
       - name: Run Maven tests
         run: mvn -B test
