@@ -64,11 +64,12 @@ public class AntGame {
   private final Image REMOVER_IMAGE = loadImage("img/remover.gif");
 
   // positioning constants
-  public static final double FRAME_WIDTH = 1024;
+  public static final double FRAME_WIDTH = 1224;
   public static final double FRAME_HEIGHT = 768;
   public static final double ANT_IMAGE_WIDTH = 66;
   public static final double ANT_IMAGE_HEIGHT = 71;
-  public static final double BEE_IMAGE_WIDTH = 58;
+  public static final double BEE_IMAGE_WIDTH = 73;
+  public static final double BEE_IMAGE_HEIGHT = 78;
   public static final double PANEL_X = 20;
   public static final double PANEL_Y = 40;
   public static final double PANEL_PAD_W = 2;
@@ -78,7 +79,7 @@ public class AntGame {
   public static final double PLACE_PAD_W = 10;
   public static final double PLACE_PAD_H = 10;
   public static final double PLACE_MARGIN = 10;
-  public static final double HIVE_X = 875;
+  public static final double HIVE_X = 1075;
   public static final double HIVE_Y = 300;
   public static final double CRYPT_HEIGHT = 650;
   public static final double LEAF_START_X = 30;
@@ -502,7 +503,7 @@ public class AntGame {
     double posX = PLACE_X;
     double posY = PLACE_Y;
     double width = BEE_IMAGE_WIDTH + 2 * PLACE_PAD_W;
-    double height = ANT_IMAGE_HEIGHT + 2 * PLACE_PAD_H;
+    double height = BEE_IMAGE_HEIGHT + 2 * PLACE_PAD_H;
     int row = 0;
     posX += (width + PLACE_MARGIN) / 2;
 
