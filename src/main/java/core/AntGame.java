@@ -310,29 +310,56 @@ public class AntGame {
     }
   }
 
-  private void drawColony() {
+ private void drawColony() {
     for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
-      double[] rect = entry.getKey();
-      Place place = entry.getValue();
+        double[] rect = entry.getKey();
+        Place place = entry.getValue();
 
-      gc.setStroke(Color.BLACK);
-      gc.strokeRect(rect[0], rect[1], rect[2], rect[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(rect[0], rect[1], rect[2], rect[3]);
 
-      if (place != tunnelEnd && TUNNEL_IMAGE != null) {
-        if (place.getClass().getName() == WATER_PLACE_CLASS_NAME) {
-          gc.drawImage(WATER_TUNNEL_IMAGE, rect[0], rect[1]);
-        } else {
-          gc.drawImage(TUNNEL_IMAGE, rect[0], rect[1]);
+        if (place != tunnelEnd && TUNNEL_IMAGE != null) {
+            if (place.getClass().getName() == WATER_PLACE_CLASS_NAME) {
+                gc.drawImage(WATER_TUNNEL_IMAGE, rect[0], rect[1]);
+            } else {
+                gc.drawImage(TUNNEL_IMAGE, rect[0], rect[1]);
+            }
         }
-      }
 
-      Ant ant = place.getAnt();
-      if (ant != null) {
-        Image img = ANT_IMAGES.get(ant.getClass().getName());
-        if (img != null) gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
-      }
+        Ant ant = place.getAnt();
+        if (ant != null)
+        {
+            if (ant instanceof ants.BodyguardAnt)
+            {
+                ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) ant;
+
+                // draw the protected ant first (behind the bodyguard)
+                Ant containedAnt = bodyguard.getContainedAnt();
+                if (containedAnt != null)
+                {
+                    Image containedImg = ANT_IMAGES.get(containedAnt.getClass().getName());
+                    if (containedImg != null)
+                        // draw contained ant slightly offset so both are visible
+                        gc.drawImage(containedImg, rect[0] + PLACE_PAD_W + 8, rect[1] + PLACE_PAD_H);
+                }
+
+                // draw the bodyguard ant on top (slightly offset the other way)
+                Image bodyguardImg = ANT_IMAGES.get(ant.getClass().getName());
+                if (bodyguardImg != null)
+                    gc.drawImage(bodyguardImg, rect[0] + PLACE_PAD_W - 8, rect[1] + PLACE_PAD_H);
+            }
+            else
+            {
+                // normal ant - draw normally
+                Image img = ANT_IMAGES.get(ant.getClass().getName());
+                if (img != null)
+                    gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
+            }
+        }
     }
-  }
+}
+
+
 
   private void drawBees() {
     for (AnimPosition pos : allBeePositions.values()) {
