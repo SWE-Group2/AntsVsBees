@@ -9,18 +9,12 @@ import java.util.ArrayList;
  * @version Fall 2014
  */
 public class Place {
-  private String name; // a name we can use for debugging
-  private Place exit; // where you leave this place to
-  private Place entrance; // where you enter this place from
-  private ArrayList<Bee> bees; // bees currently in the place
-  private Ant ant; // ant (singular) currently in the place
+  private String name;
+  private Place exit;
+  private Place entrance;
+  private ArrayList<Bee> bees;
+  private Ant ant;
 
-  /**
-   * Creates a new place with the given name and exit
-   *
-   * @param name The place's name
-   * @param exit The place's exit
-   */
   public Place(String name, Place exit) {
     this.name = name;
     this.exit = exit;
@@ -29,146 +23,125 @@ public class Place {
     this.ant = null;
   }
 
-  /**
-   * Creates a new place with the given name
-   *
-   * @param name The place's name
-   */
   public Place(String name) {
     this(name, null);
   }
 
-  /**
-   * Returns the place's ant
-   *
-   * @return the place's ant
-   */
   public Ant getAnt() {
     return ant;
   }
 
   /**
-   * Returns an array of the place's bees
+   * Checks whether an insect can be added to this place. Normal places accept all insects.
+   * WaterPlace overrides this to only allow watersafe insects.
    *
-   * @return an array of the place's bees
+   * @param insect The insect to check
+   * @return true if the insect can be added
    */
+  public boolean canAddInsect(Insect insect) {
+    return true;
+  }
+
   public Bee[] getBees() {
     return bees.toArray(new Bee[0]);
   }
 
-  /**
-   * Returns a nearby bee, up to the maxDistance ahead. If multiple bees are the same distance, a
-   * random bee is chosen
-   *
-   * @param minDistance The minimum distance away (in Places) a bee can be. A value of -1 means no
-   *     min distance
-   * @param maxDistance The maximum distance away (in Places) a Bee can be. A value of -1 means no
-   *     max distance
-   * @return A random nearby bee.
-   */
   public Bee getClosestBee(int minDistance, int maxDistance) {
     Place p = this;
     for (int dist = 0; p != null && dist <= maxDistance; dist++) {
       if (dist >= minDistance && p.bees.size() > 0)
-        return p.bees.get((int) (Math.random() * p.bees.size())); // pick a random bee
+        return p.bees.get((int) (Math.random() * p.bees.size()));
       p = p.entrance;
     }
     return null;
   }
 
-  /**
-   * Returns the name of the place
-   *
-   * @return the name of the place
-   */
   public String getName() {
     return name;
   }
 
-  /**
-   * Returns the exit of the place
-   *
-   * @return the exit of the place
-   */
   public Place getExit() {
     return exit;
   }
 
-  /**
-   * Sets the entrance to the place
-   *
-   * @param entrance The entrance to the place
-   */
   public void setEntrance(Place entrance) {
     this.entrance = entrance;
   }
 
-  /**
-   * Returns the entrance to the place
-   *
-   * @return the entrance to the place
-   */
   public Place getEntrance() {
     return this.entrance;
   }
 
   /**
-   * Adds an ant to the place. If there is already an ant, this method has no effect
+   * Adds an ant to the place. Special case: if a BodyguardAnt is being added and there is already
+   * an ant here, the BodyguardAnt wraps around the existing ant and protects it. Also if there is
+   * already a BodyguardAnt here, a new ant can go inside it.
    *
    * @param ant The ant to add to the place.
    */
   public void addInsect(Ant ant) {
     if (this.ant == null) {
+      // no ant here yet - just add normally
       this.ant = ant;
       ant.setPlace(this);
-    } else System.out.println("Already an ant in " + this); // report error
+    } else if (ant instanceof ants.BodyguardAnt) {
+      // adding a BodyguardAnt on top of an existing ant
+      ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) ant;
+      bodyguard.setContainedAnt(this.ant);
+      this.ant = bodyguard;
+      bodyguard.setPlace(this);
+      System.out.println("BodyguardAnt is now protecting " + bodyguard.getContainedAnt());
+    } else if (this.ant instanceof ants.BodyguardAnt) {
+      // there is already a BodyguardAnt here - put the new ant inside it
+      ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) this.ant;
+      if (bodyguard.getContainedAnt() == null) {
+        bodyguard.setContainedAnt(ant);
+        ant.setPlace(this);
+        System.out.println("BodyguardAnt is now protecting " + ant);
+      } else {
+        System.out.println("Already an ant inside the BodyguardAnt in " + this);
+      }
+    } else {
+      System.out.println("Already an ant in " + this);
+    }
   }
 
-  /**
-   * Adds a bee to the place
-   *
-   * @param bee The bee to add to the place.
-   */
   public void addInsect(Bee bee) {
     bees.add(bee);
     bee.setPlace(this);
   }
 
   /**
-   * Removes the ant from the place. If the given ant is not in this place, this method has no
-   * effect
+   * Removes the ant from the place. If the ant being removed is a BodyguardAnt, the ant it was
+   * protecting takes its place.
    *
    * @param ant The ant to remove from the place
    */
   public void removeInsect(Ant ant) {
     if (this.ant == ant) {
-      this.ant = null;
-      ant.setPlace(null);
-    } else System.out.println(ant + " is not in " + this);
+      if (this.ant instanceof ants.BodyguardAnt) {
+        ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) this.ant;
+        Ant protected_ant = bodyguard.getContainedAnt();
+        this.ant = protected_ant;
+        if (protected_ant != null) {
+          protected_ant.setPlace(this);
+          System.out.println("BodyguardAnt died! " + protected_ant + " is now exposed.");
+        }
+        ant.setPlace(null);
+      } else {
+        this.ant = null;
+        ant.setPlace(null);
+      }
+    } else {
+      System.out.println(ant + " is not in " + this);
+    }
   }
 
-  /**
-   * Removes the bee from the place. If the given bee is not in this place, this method has no
-   * effect
-   *
-   * @param bee The bee to remove from the place.
-   */
   public void removeInsect(Bee bee) {
     if (bees.contains(bee)) {
       bees.remove(bee);
       bee.setPlace(null);
     } else System.out.println(bee + " is not in " + this);
-  }
-
-  /*
-   * Determines if an insect can be added to this place.
-   *
-   * @param insect The insect to check.
-   *
-   * @return true if the insect can be added, false otherwise.
-   */
-  public boolean canAddInsect(Insect insect) {
-    return true;
   }
 
   public String toString() {
