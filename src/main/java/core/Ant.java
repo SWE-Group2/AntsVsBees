@@ -1,5 +1,7 @@
 package core;
 
+import ants.QueenAnt;
+
 /**
  * A class representing a basic Ant
  *
@@ -7,7 +9,6 @@ package core;
  */
 public abstract class Ant extends Insect {
   protected int foodCost; // the amount of food needed to make this ant
-
   protected boolean blocker = true; // whether this ant blocks bees from advancing past its location
 
   /**
@@ -42,5 +43,20 @@ public abstract class Ant extends Insect {
   /** Removes the ant from its current place */
   public void leavePlace() {
     this.place.removeInsect(this);
+  }
+
+  public boolean isQueenNearby() {
+    Place currentPlace = this.getPlace();
+    if (currentPlace != null) {
+      Place exit = currentPlace.getExit();
+      Place entrance = currentPlace.getEntrance();
+      if ((exit != null && exit.getAnt() instanceof QueenAnt)
+          || (entrance != null && entrance.getAnt() instanceof QueenAnt)) {
+        System.out.println("Queen is nearby!");
+        return true;
+      }
+    }
+    System.out.println("No queen nearby.");
+    return false;
   }
 }

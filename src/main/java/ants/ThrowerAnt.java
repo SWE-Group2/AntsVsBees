@@ -31,6 +31,11 @@ public class ThrowerAnt extends Ant {
     assert colony != null : "Colony cannot be null";
     Bee target = getTarget();
     if (target != null) {
+      if (isQueenNearby()) {
+        System.out.println("Queen is nearby! ThrowerAnt does double damage.");
+        target.reduceArmor(this.damage * 2);
+        return;
+      }
       target.reduceArmor(this.damage);
       System.out.println("ThrowerAnt threw a leaf at " + target);
     }
