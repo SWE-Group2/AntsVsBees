@@ -1,5 +1,6 @@
 package core;
 
+import bees.GhostBee;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +60,11 @@ public class Hive extends Place {
   public void addWave(int attackTime, int numBees) {
     Bee[] bees = new Bee[numBees];
     for (int i = 0; i < bees.length; i++) {
-      bees[i] = new Bee(beeArmor);
+      if (Math.random() < 0.2) { // 20% chance to create a GhostBee
+        bees[i] = new GhostBee(beeArmor);
+      } else {
+        bees[i] = new Bee(beeArmor);
+      }
       this.addInsect(bees[i]); // put the bee in Place
     }
     waves.put(attackTime, bees);
@@ -98,9 +103,9 @@ public class Hive extends Place {
     return beeArmor;
   }
 
-  /////////////////////////////////
+  /////////////////////////////
   // Convenience factory methods //
-  /////////////////////////////////
+  /////////////////////////////
 
   /**
    * Makes a hive with two attacking bees

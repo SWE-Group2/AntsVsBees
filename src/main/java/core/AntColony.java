@@ -1,5 +1,6 @@
 package core;
 
+import ants.QueenAnt;
 import java.util.ArrayList;
 import places.WaterPlace;
 
@@ -91,6 +92,16 @@ public class AntColony {
     return beeEntrances.toArray(new Place[0]);
   }
 
+  public Place getRealQueenColonyPlace() {
+    for (Place p : places) {
+      Ant mainAnt = p.getMainAnt();
+      if (mainAnt != null && mainAnt instanceof QueenAnt && ((QueenAnt) mainAnt).isRealQueen()) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   /**
    * Returns the queen's location
    *
@@ -124,6 +135,10 @@ public class AntColony {
    * @return if there are any bees in the queen's location
    */
   public boolean queenHasBees() {
+    Place queenColonyPlace = getRealQueenColonyPlace();
+    if (queenColonyPlace != null) {
+      return queenColonyPlace.getBees().length > 0 || queenPlace.getBees().length > 0;
+    }
     return this.queenPlace.getBees().length > 0;
   }
 
@@ -136,6 +151,9 @@ public class AntColony {
    * @param ant The ant to place
    */
   public void deployAnt(Place place, Ant ant) {
+    if (ant instanceof QueenAnt && getRealQueenColonyPlace() == null) {
+      ((QueenAnt) ant).setRealQueen(true);
+    }
     if (place.canAddInsect(ant) && this.food >= ant.getFoodCost()) {
       this.food -= ant.getFoodCost();
       place.addInsect(ant);
@@ -148,7 +166,13 @@ public class AntColony {
    * @param place Where to remove the ant from
    */
   public void removeAnt(Place place) {
-    if (place.getAnt() != null) place.removeInsect(place.getAnt());
+    if (place.getAnt() != null) {
+      if (place.getAnt() instanceof QueenAnt && ((QueenAnt) place.getAnt()).isRealQueen()) {
+        System.out.println("Cannot remove the real queen!");
+        return;
+      }
+      place.removeInsect(place.getAnt());
+    }
   }
 
   /**

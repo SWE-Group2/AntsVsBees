@@ -1,5 +1,7 @@
 package core;
 
+import ants.QueenAnt;
+
 /**
  * Represents a Bee
  *
@@ -70,8 +72,17 @@ public class Bee extends Insect {
         return; // skip this turn
       }
     }
-    if (this.isBlocked()) sting(this.place.getAnt());
-    else if (this.armor > 0) this.moveTo(this.place.getExit());
+    if (this.isBlocked()) {
+      Ant blockingAnt = this.place.getAnt();
+      if (blockingAnt instanceof QueenAnt && ((QueenAnt) blockingAnt).isRealQueen()) {
+        System.out.println(this + " is blocked by the real Queen and cannot sting.");
+
+      } else {
+        sting(this.place.getAnt());
+      }
+    } else if (this.armor > 0) {
+      this.moveTo(this.place.getExit());
+    }
 
     this.reduceEffects();
   }

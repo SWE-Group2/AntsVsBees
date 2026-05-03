@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import bees.GhostBee;
 import core.AntColony;
 import core.Bee;
 import core.Place;
@@ -68,5 +69,21 @@ class ThrowerAntTest {
     ant.action(colony);
 
     assertEquals(2, bee.getArmor());
+  }
+
+  @Test
+  void actionDoesNotDamageGhostBee() {
+    AntColony colony = new AntColony(1, 4, 0, 10);
+    Place antPlace = colony.getPlaces()[0];
+    Place beePlace = colony.getPlaces()[2];
+
+    ThrowerAnt ant = new ThrowerAnt();
+    GhostBee bee = new GhostBee(3);
+    antPlace.addInsect(ant);
+    beePlace.addInsect(bee);
+
+    ant.action(colony);
+
+    assertEquals(3, bee.getArmor());
   }
 }

@@ -1,5 +1,6 @@
 package ants;
 
+import bees.GhostBee;
 import core.Ant;
 import core.AntColony;
 import core.Bee;
@@ -66,9 +67,14 @@ public class FireAnt extends Ant {
       System.out.println("FireAnt died and explodes! Dealing " + damage + " damage to all bees!");
 
       // damage ALL bees in the same place
-      // we use a copy of the array because damaging bees might remove them from the list
+      // we use a copy of the array because damaging bees might remove them from the
+      // list
       Bee[] beesInPlace = currentPlace.getBees();
       for (Bee bee : beesInPlace) {
+        if (bee instanceof GhostBee) {
+          System.out.println("FireAnt cannot target GhostBee!");
+          continue;
+        }
         bee.reduceArmor(damage);
         System.out.println("FireAnt explosion hit " + bee + " for " + damage + " damage!");
       }

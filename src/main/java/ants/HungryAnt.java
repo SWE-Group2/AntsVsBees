@@ -1,5 +1,6 @@
 package ants;
 
+import bees.GhostBee;
 import core.Ant;
 import core.AntColony;
 import core.Bee;
@@ -65,6 +66,10 @@ public class HungryAnt extends Ant {
 
       if (target != null) {
         // eat the bee by reducing its armor to 0 (instantly kills it)
+        if (target instanceof GhostBee) {
+          System.out.println("HungryAnt cannot target GhostBee!");
+          return;
+        }
         target.reduceArmor(target.getArmor());
         System.out.println(
             "HungryAnt ate " + target + "! Now digesting for " + DIGESTION_TIME + " turns.");

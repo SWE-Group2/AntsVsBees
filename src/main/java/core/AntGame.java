@@ -1,6 +1,7 @@
 package core;
 
 import ants.ThrowerAnt;
+import bees.GhostBee;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
@@ -61,6 +62,8 @@ public class AntGame {
   private final Image TUNNEL_IMAGE = loadImage("img/tunnel.gif");
   private final Image WATER_TUNNEL_IMAGE = loadImage("img/water-tunnel.png");
   private final Image BEE_IMAGE = loadImage("img/bee.gif");
+  private final Image ZOMBIE_BEE_IMAGE = loadImage("img/zombie_bee.gif");
+  private final Image GHOST_BEE_IMAGE = loadImage("img/ghost_bee.gif");
   private final Image REMOVER_IMAGE = loadImage("img/remover.gif");
 
   // positioning constants
@@ -336,8 +339,18 @@ public class AntGame {
   }
 
   private void drawBees() {
-    for (AnimPosition pos : allBeePositions.values()) {
-      if (BEE_IMAGE != null) gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+    for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
+      AnimPosition pos = entry.getValue();
+      Bee bee = entry.getKey();
+      if (bee instanceof GhostBee) {
+        if (GHOST_BEE_IMAGE != null) {
+          gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
+        }
+      } else {
+        if (BEE_IMAGE != null) {
+          gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+        }
+      }
     }
   }
 

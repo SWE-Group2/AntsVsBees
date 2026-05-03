@@ -72,6 +72,16 @@ public class Place {
     return this.entrance;
   }
 
+  public Ant getMainAnt() {
+    if (ant instanceof ants.BodyguardAnt) {
+      ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) ant;
+      if (bodyguard.getContainedAnt() != null) {
+        return bodyguard.getContainedAnt();
+      }
+    }
+    return ant;
+  }
+
   /**
    * Adds an ant to the place. Special case: if a BodyguardAnt is being added and there is already
    * an ant here, the BodyguardAnt wraps around the existing ant and protects it. Also if there is

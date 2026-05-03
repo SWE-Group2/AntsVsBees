@@ -2,6 +2,7 @@ package ants;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import bees.GhostBee;
 import core.AntColony;
 import core.Bee;
 import core.Place;
@@ -71,6 +72,24 @@ class FireAntTest {
     // BOTH bees should have lost 3 armor (5 - 3 = 2)
     assertEquals(2, bee1.getArmor());
     assertEquals(2, bee2.getArmor());
+  }
+
+  @Test
+  void fireAntExplosionDoesNotDamageGhostBee() {
+    AntColony colony = new AntColony(1, 3, 0, 10);
+    FireAnt ant = new FireAnt();
+    Place place = colony.getPlaces()[0];
+
+    GhostBee ghostBee = new GhostBee(5);
+    Bee regularBee = new Bee(5);
+    place.addInsect(ant);
+    place.addInsect(ghostBee);
+    place.addInsect(regularBee);
+
+    ant.reduceArmor(1);
+
+    assertEquals(5, ghostBee.getArmor());
+    assertEquals(2, regularBee.getArmor());
   }
 
   /** Test that FireAnt action does nothing */

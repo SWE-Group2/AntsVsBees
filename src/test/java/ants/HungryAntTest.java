@@ -2,6 +2,7 @@ package ants;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import bees.GhostBee;
 import core.AntColony;
 import core.Bee;
 import core.Place;
@@ -103,5 +104,22 @@ class HungryAntTest {
     // eat second bee
     ant.action(colony);
     assertEquals(3, ant.getTurnsDigesting());
+  }
+
+  @Test
+  void hungryAntDoesNotEatGhostBee() {
+    AntColony colony = new AntColony(1, 3, 0, 10);
+    HungryAnt ant = new HungryAnt();
+    Place place = colony.getPlaces()[0];
+
+    GhostBee bee = new GhostBee(3);
+    place.addInsect(ant);
+    place.addInsect(bee);
+
+    ant.action(colony);
+
+    assertEquals(3, bee.getArmor());
+    assertEquals(0, ant.getTurnsDigesting());
+    assertEquals(1, place.getBees().length);
   }
 }
