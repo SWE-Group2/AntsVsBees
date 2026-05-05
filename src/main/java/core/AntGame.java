@@ -37,9 +37,11 @@ import save.WaveSpec;
  * A class that controls the graphical game of Ants vs. Some-Bees. Converted from Swing to JavaFX.
  */
 public class AntGame {
+    private MusicManager musicManager;
     // game models
     private AntColony colony;
     private Hive hive;
+    private DifficultyLevel difficultyLevel;
     private static final String ANT_FILE = "antlist.properties";
     private static final String ANT_PKG = "ants";
     private static final String WATER_PLACE_CLASS_NAME = "places.WaterPlace";
@@ -68,7 +70,7 @@ public class AntGame {
 
     // positioning constants
     public static final double FRAME_WIDTH = 1224;
-    public static final double FRAME_HEIGHT = 768;
+    public static final double FRAME_HEIGHT = 900;
     public static final double ANT_IMAGE_WIDTH = 66;
     public static final double ANT_IMAGE_HEIGHT = 71;
     public static final double BEE_IMAGE_WIDTH = 73;
@@ -113,9 +115,11 @@ public class AntGame {
     private final BiConsumer<String, GameSnapshot> onSaveRequested;
 
     /** Creates a new AntGame with JavaFX rendering */
-    public AntGame(AntColony colony, Hive hive, Stage stage, BiConsumer<String, GameSnapshot> saveRequested) {
+    public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
+            BiConsumer<String, GameSnapshot> saveRequested) {
         this.colony = colony;
         this.hive = hive;
+        this.difficultyLevel = difficultyLevel;
         this.frameCount = 0;
         this.turn = 0;
         this.onSaveRequested = saveRequested;
@@ -171,6 +175,10 @@ public class AntGame {
             Platform.exit();
         });
         stage.show();
+
+        musicManager = new MusicManager();
+
+        musicManager.playBackgroundMusic("audio/consumerism.mp3");
 
         // setup game loop
         clock = new AnimationTimer() {
@@ -305,7 +313,8 @@ public class AntGame {
         gc.setFill(Color.BLACK);
         gc.setFont(Font.font("SansSerif", 14));
         gc.fillText("Ant selected: " + antString, 20, 20);
-        gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn, 20, 140);
+        gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn + ", Difficulty: " + difficultyLevel.displayName(),
+                20, 140);
 
         if (!gameStarted) {
             gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
@@ -608,16 +617,20 @@ public class AntGame {
         int numTunnels = colony.getBeeEntrances().length;
         int tunnelLength = colony.getPlaces().length / numTunnels;
 
-        return new GameSnapshot(numTunnels, tunnelLength, water, colony.getFood(), turn, ants, bees, remaining,
-                hive.getBeeArmor());
+        return new GameSnapshot(difficultyLevel.number(), numTunnels, tunnelLength, water, colony.getFood(), turn, ants,
+                bees, remaining, hive.getBeeArmor());
     }
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
         // TODO: This needs fleshing out with rebuilding game play
-        AntColony colony = new AntColony(3, 8, 3, 2);
-        Hive hive = Hive.makeFullHive();
-        return new AntGame(colony, hive, stage, onSave);
+        DifficultyLevel level = DifficultyLevel.forNumber(snapshot.difficultyLevel());
+        AntColony colony = level.createColony();
+        Hive hive = level.createHive();
+        AntGame game = new AntGame(colony, hive, level, stage, onSave);
+        game.turn = snapshot.turn();
+        game.render();
+        return game;
     }
 
     // -------------------------
