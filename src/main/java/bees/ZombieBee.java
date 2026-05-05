@@ -19,13 +19,12 @@ public class ZombieBee extends Bee {
   private static final int ATTACK_RANGE = 3;
 
   /**
-   * Creates a new ZombieBee with the given armor. Post-condition: watersafe is true (bees can fly)
+   * Creates a new ZombieBee with the given armor. Watersafe is inherited from Bee (already true).
    *
    * @param armor The ZombieBee's armor
    */
   public ZombieBee(int armor) {
-    super(armor);
-    this.watersafe = true;
+    super(armor); // watersafe=true is already inherited from Bee constructor
   }
 
   /**
