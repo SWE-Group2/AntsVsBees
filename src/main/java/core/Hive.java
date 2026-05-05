@@ -16,6 +16,7 @@ public class Hive extends Place {
     public static final String NAME = "Hive";
 
     private int beeArmor; // armor for all the bees
+    private double ghostBeeChance;
     private Map<Integer, Bee[]> waves; // a mapping from attack times to the list of bees that will charge in
 
     /**
@@ -25,8 +26,13 @@ public class Hive extends Place {
      *            The armor of the bees
      */
     public Hive(int beeArmor) {
+        this(beeArmor, 0.2);
+    }
+
+    public Hive(int beeArmor, double ghostBeeChance) {
         super(NAME, null);
         this.beeArmor = beeArmor;
+        this.ghostBeeChance = Math.max(0, Math.min(1, ghostBeeChance));
         this.waves = new HashMap<Integer, Bee[]>();
     }
 
@@ -65,7 +71,7 @@ public class Hive extends Place {
     public void addWave(int attackTime, int numBees) {
         Bee[] bees = new Bee[numBees];
         for (int i = 0; i < bees.length; i++) {
-            if (Math.random() < 0.2) { // 20% chance to create a GhostBee
+            if (Math.random() < ghostBeeChance) {
                 bees[i] = new GhostBee(beeArmor);
             } else {
                 bees[i] = new Bee(beeArmor);
@@ -108,6 +114,10 @@ public class Hive extends Place {
         return beeArmor;
     }
 
+    public double getGhostBeeChance() {
+        return ghostBeeChance;
+    }
+
     ///////////////////////////
     // Convenience factory methods //
     ///////////////////////////
@@ -136,6 +146,17 @@ public class Hive extends Place {
             hive.addWave(i, 1);
         hive.addWave(15, 8);
         return hive;
+    }
+
+    /**
+     * Makes a hive scaled for the selected difficulty level.
+     *
+     * @param difficulty
+     *            a level from 1 (easiest) to 10 (hardest)
+     * @return A filled hive scaled to the requested level
+     */
+    public static Hive makeDifficultyHive(int difficulty) {
+        return DifficultyLevel.forNumber(difficulty).createHive();
     }
 
     /**

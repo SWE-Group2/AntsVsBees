@@ -7,6 +7,7 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 import save.GameSnapshot;
 import save.SaveManager;
+import ui.DifficultyScreen;
 import ui.LoginScreen;
 import ui.MenuScreen;
 
@@ -44,14 +45,20 @@ public class AntsVsSomeBees extends Application {
     }
 
     private void showMenu() {
-        MenuScreen menu = new MenuScreen(savesForCurrentUser(), this::startNewGame, this::startLoadedGame);
+        MenuScreen menu = new MenuScreen(savesForCurrentUser(), this::showDifficulty, this::startLoadedGame);
         stage.setScene(menu.getScene());
     }
 
-    private void startNewGame() {
-        AntColony colony = new AntColony(3, 8, 3, 2);
-        Hive hive = Hive.makeFullHive();
-        new AntGame(colony, hive, stage, (name, snapshot) -> {
+    private void showDifficulty() {
+        DifficultyScreen difficulty = new DifficultyScreen(this::startNewGame, this::showMenu);
+        stage.setScene(difficulty.getScene());
+    }
+
+    private void startNewGame(int difficulty) {
+        DifficultyLevel level = DifficultyLevel.forNumber(difficulty);
+        AntColony colony = level.createColony();
+        Hive hive = level.createHive();
+        new AntGame(colony, hive, level, stage, (name, snapshot) -> {
             savesForCurrentUser().save(name, snapshot);
             showMenu();
         });
