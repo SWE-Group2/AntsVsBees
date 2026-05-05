@@ -313,8 +313,8 @@ public class AntGame {
         gc.setFill(Color.BLACK);
         gc.setFont(Font.font("SansSerif", 14));
         gc.fillText("Ant selected: " + antString, 20, 20);
-        gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn + ", Difficulty: "
-                + difficultyLevel.displayName(), 20, 140);
+        gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn + ", Difficulty: " + difficultyLevel.displayName(),
+                20, 140);
 
         if (!gameStarted) {
             gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
@@ -539,14 +539,14 @@ public class AntGame {
                 row++;
             }
 
-            double[] clickable = { posX, posY, width, height };
+            double[] clickable = {posX, posY, width, height};
             colonyAreas.put(clickable, place);
             colonyRects.put(place, clickable);
             posX += width + PLACE_MARGIN;
         }
 
         // queen location
-        double[] queenRect = { 0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0 };
+        double[] queenRect = {0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0};
         tunnelEnd = colony.getQueenPlace();
         colonyAreas.put(queenRect, tunnelEnd);
         colonyRects.put(tunnelEnd, queenRect);
@@ -558,11 +558,11 @@ public class AntGame {
         double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
         double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
 
-        removerArea = new double[] { posX, posY, width, height };
+        removerArea = new double[]{posX, posY, width, height};
         posX += width + 2;
 
         for (String antType : ANT_TYPES) {
-            double[] clickable = { posX, posY, width, height };
+            double[] clickable = {posX, posY, width, height};
             Ant ant = buildAnt(antType);
             if (ant != null)
                 antSelectorAreas.put(clickable, ant);
@@ -592,7 +592,7 @@ public class AntGame {
         return Color.rgb(r, g, b);
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private Ant buildAnt(String antType) {
         try {
             Class antClass = Class.forName(antType);

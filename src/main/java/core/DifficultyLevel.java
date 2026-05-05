@@ -3,8 +3,7 @@ package core;
 import java.util.List;
 
 public final class DifficultyLevel {
-    private static final List<DifficultyLevel> LEVELS = List.of(
-            new DifficultyLevel(1, 3, 6, 3, 4, 2, 5, 3, 1, 3, 0.10),
+    private static final List<DifficultyLevel> LEVELS = List.of(new DifficultyLevel(1, 3, 6, 3, 4, 2, 5, 3, 1, 3, 0.10),
             new DifficultyLevel(2, 3, 6, 3, 4, 2, 4, 3, 1, 4, 0.15),
             new DifficultyLevel(3, 4, 7, 3, 4, 2, 4, 3, 1, 5, 0.20),
             new DifficultyLevel(4, 4, 7, 3, 3, 3, 3, 3, 1, 6, 0.25),
@@ -48,10 +47,7 @@ public final class DifficultyLevel {
     }
 
     public static DifficultyLevel forNumber(int number) {
-        return LEVELS.stream()
-                .filter(level -> level.number == number)
-                .findFirst()
-                .orElse(LEVELS.get(0));
+        return LEVELS.stream().filter(level -> level.number == number).findFirst().orElse(LEVELS.get(0));
     }
 
     public int number() {
