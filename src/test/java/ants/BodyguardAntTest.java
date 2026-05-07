@@ -1,57 +1,41 @@
 package ants;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-
-import org.junit.jupiter.api.Test;
 
 import core.AntColony;
 import core.Bee;
 import core.Place;
+import org.junit.jupiter.api.Test;
 
 /**
- * Tests for BodyguardAnt class.
- * Checks food cost, armor, protecting behaviour, and death behaviour.
+ * Tests for BodyguardAnt class. Checks food cost, armor, protecting behaviour, and death behaviour.
  */
-class BodyguardAntTest
-{
-    /**
-     * Test that BodyguardAnt costs 4 food
-     */
+class BodyguardAntTest {
+    /** Test that BodyguardAnt costs 4 food */
     @Test
-    void bodyguardAntHasFoodCostOfFour()
-    {
+    void bodyguardAntHasFoodCostOfFour() {
         BodyguardAnt ant = new BodyguardAnt();
         assertEquals(4, ant.getFoodCost());
     }
 
-    /**
-     * Test that BodyguardAnt starts with 2 armor
-     */
+    /** Test that BodyguardAnt starts with 2 armor */
     @Test
-    void bodyguardAntHasArmorOfTwo()
-    {
+    void bodyguardAntHasArmorOfTwo() {
         BodyguardAnt ant = new BodyguardAnt();
         assertEquals(2, ant.getArmor());
     }
 
-    /**
-     * Test that BodyguardAnt starts with no contained ant
-     */
+    /** Test that BodyguardAnt starts with no contained ant */
     @Test
-    void bodyguardAntStartsWithNoContainedAnt()
-    {
+    void bodyguardAntStartsWithNoContainedAnt() {
         BodyguardAnt ant = new BodyguardAnt();
         assertNull(ant.getContainedAnt());
     }
 
-    /**
-     * Test that BodyguardAnt can protect another ant in the same place
-     */
+    /** Test that BodyguardAnt can protect another ant in the same place */
     @Test
-    void bodyguardAntCanProtectAnotherAnt()
-    {
+    void bodyguardAntCanProtectAnotherAnt() {
         AntColony colony = new AntColony(1, 3, 0, 10);
         Place place = colony.getPlaces()[0];
 
@@ -68,12 +52,9 @@ class BodyguardAntTest
         assertEquals(thrower, bodyguard.getContainedAnt());
     }
 
-    /**
-     * Test that when BodyguardAnt dies, the protected ant takes its place
-     */
+    /** Test that when BodyguardAnt dies, the protected ant takes its place */
     @Test
-    void protectedAntTakesPlaceWhenBodyguardDies()
-    {
+    void protectedAntTakesPlaceWhenBodyguardDies() {
         AntColony colony = new AntColony(1, 3, 0, 10);
         Place place = colony.getPlaces()[0];
 
@@ -92,12 +73,9 @@ class BodyguardAntTest
         assertEquals(thrower, place.getAnt());
     }
 
-    /**
-     * Test that bee stings BodyguardAnt first before hurting protected ant
-     */
+    /** Test that bee stings BodyguardAnt first before hurting protected ant */
     @Test
-    void beeStingsBodyguardFirst()
-    {
+    void beeStingsBodyguardFirst() {
         AntColony colony = new AntColony(1, 3, 0, 10);
         Place place = colony.getPlaces()[0];
 

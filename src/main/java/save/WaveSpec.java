@@ -1,3 +1,4 @@
 package save;
 
-public record WaveSpec(int attackTime, int numBees) {}
+public record WaveSpec(int attackTime, int numBees) {
+}
