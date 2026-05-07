@@ -1,35 +1,63 @@
 package core;
 
+import ants.QueenAnt;
+
 /**
  * A class representing a basic Ant
  *
  * @author YOUR NAME HERE
  */
 public abstract class Ant extends Insect {
-  protected int foodCost; // the amount of food needed to make this ant
+    protected int foodCost; // the amount of food needed to make this ant
+    protected boolean blocker = true; // whether this ant blocks bees from advancing past its location
 
-  /**
-   * Creates a new Ant, with a food cost of 0.
-   *
-   * @param armor The armor of the ant.
-   */
-  public Ant(int armor) {
-    super(armor, null);
-    this.foodCost = 0;
-    this.watersafe = false;
-  }
+    /**
+     * Creates a new Ant, with a food cost of 0.
+     *
+     * @param armor
+     *            The armor of the ant.
+     */
+    public Ant(int armor) {
+        super(armor, null);
+        this.foodCost = 0;
+        this.watersafe = false;
+    }
 
-  /**
-   * Returns the ant's food cost
-   *
-   * @return the ant's good cost
-   */
-  public int getFoodCost() {
-    return foodCost;
-  }
+    /**
+     * Returns the ant's food cost
+     *
+     * @return the ant's food cost
+     */
+    public int getFoodCost() {
+        return foodCost;
+    }
 
-  /** Removes the ant from its current place */
-  public void leavePlace() {
-    this.place.removeInsect(this);
-  }
+    /**
+     * Returns whether this ant blocks bees from advancing past its location
+     *
+     * @return whether this ant blocks bees from advancing past its location
+     */
+    public boolean blocksBees() {
+        return blocker;
+    }
+
+    /** Removes the ant from its current place */
+    public void leavePlace() {
+        this.place.removeInsect(this);
+    }
+
+    public boolean isQueenNearby() {
+        Place currentPlace = this.getPlace();
+        if (currentPlace != null) {
+            Place exit = currentPlace.getExit();
+            Place entrance = currentPlace.getEntrance();
+            if ((exit != null && exit.getAnt() instanceof QueenAnt)
+                    || (entrance != null && entrance.getAnt() instanceof QueenAnt)) {
+                System.out.println("Queen is nearby!");
+                return true;
+            }
+        }
+        System.out.println("No queen nearby.");
+        return false;
+    }
 }
