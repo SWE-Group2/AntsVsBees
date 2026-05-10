@@ -156,7 +156,6 @@ public class AntGame {
 
         Pane root = new Pane(canvas);
         Scene scene = new Scene(root, FRAME_WIDTH, FRAME_HEIGHT);
-        // TODO: refactor to have buttons at the bottom of the page
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.S && gameStarted && !gameOver) {
                 if (onSaveRequested != null) {
@@ -178,7 +177,6 @@ public class AntGame {
         stage.show();
 
         musicManager = new MusicManager();
-
         musicManager.playBackgroundMusic("audio/consumerism.mp3");
 
         // setup game loop
@@ -368,24 +366,27 @@ public class AntGame {
         }
     }
 
-   private void drawBees() {
-    for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
-        AnimPosition pos = entry.getValue();
-        Bee bee = entry.getKey();
-        if (bee instanceof GhostBee) {
-            if (GHOST_BEE_IMAGE != null)
-                gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
-        } else if (bee instanceof ZombieBee) {
-            if (ZOMBIE_BEE_IMAGE != null)
-                gc.drawImage(ZOMBIE_BEE_IMAGE, pos.x, pos.y);
-            else if (BEE_IMAGE != null)
-                gc.drawImage(BEE_IMAGE, pos.x, pos.y);
-        } else {
-            if (BEE_IMAGE != null)
-                gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+    private void drawBees() {
+        for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
+            AnimPosition pos = entry.getValue();
+            Bee bee = entry.getKey();
+            if (bee instanceof GhostBee) {
+                // draw ghost bee with ghost image
+                if (GHOST_BEE_IMAGE != null)
+                    gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
+            } else if (bee instanceof ZombieBee) {
+                // draw zombie bee with zombie image
+                if (ZOMBIE_BEE_IMAGE != null)
+                    gc.drawImage(ZOMBIE_BEE_IMAGE, pos.x, pos.y);
+                else if (BEE_IMAGE != null)
+                    gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+            } else {
+                // normal bee
+                if (BEE_IMAGE != null)
+                    gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+            }
         }
     }
-}
 
     private void drawLeaves() {
         for (AnimPosition leafPos : leaves) {
@@ -646,7 +647,6 @@ public class AntGame {
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
-        // TODO: This needs fleshing out with rebuilding game play
         DifficultyLevel level = DifficultyLevel.forNumber(snapshot.difficultyLevel());
         AntColony colony = level.createColony();
         Hive hive = level.createHive();
