@@ -2,6 +2,7 @@ package core;
 
 import ants.ThrowerAnt;
 import bees.GhostBee;
+import bees.ZombieBee;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
@@ -367,21 +368,24 @@ public class AntGame {
         }
     }
 
-    private void drawBees() {
-        for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
-            AnimPosition pos = entry.getValue();
-            Bee bee = entry.getKey();
-            if (bee instanceof GhostBee) {
-                if (GHOST_BEE_IMAGE != null) {
-                    gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
-                }
-            } else {
-                if (BEE_IMAGE != null) {
-                    gc.drawImage(BEE_IMAGE, pos.x, pos.y);
-                }
-            }
+   private void drawBees() {
+    for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
+        AnimPosition pos = entry.getValue();
+        Bee bee = entry.getKey();
+        if (bee instanceof GhostBee) {
+            if (GHOST_BEE_IMAGE != null)
+                gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
+        } else if (bee instanceof ZombieBee) {
+            if (ZOMBIE_BEE_IMAGE != null)
+                gc.drawImage(ZOMBIE_BEE_IMAGE, pos.x, pos.y);
+            else if (BEE_IMAGE != null)
+                gc.drawImage(BEE_IMAGE, pos.x, pos.y);
+        } else {
+            if (BEE_IMAGE != null)
+                gc.drawImage(BEE_IMAGE, pos.x, pos.y);
         }
     }
+}
 
     private void drawLeaves() {
         for (AnimPosition leafPos : leaves) {
