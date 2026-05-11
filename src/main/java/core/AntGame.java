@@ -2,6 +2,7 @@ package core;
 
 import ants.ThrowerAnt;
 import bees.GhostBee;
+import bees.ZombieBee;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
@@ -155,7 +156,6 @@ public class AntGame {
 
         Pane root = new Pane(canvas);
         Scene scene = new Scene(root, FRAME_WIDTH, FRAME_HEIGHT);
-        // TODO: refactor to have buttons at the bottom of the page
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.S && gameStarted && !gameOver) {
                 if (onSaveRequested != null) {
@@ -177,7 +177,6 @@ public class AntGame {
         stage.show();
 
         musicManager = new MusicManager();
-
         musicManager.playBackgroundMusic("audio/consumerism.mp3");
 
         // setup game loop
@@ -341,9 +340,28 @@ public class AntGame {
 
             Ant ant = place.getAnt();
             if (ant != null) {
-                Image img = ANT_IMAGES.get(ant.getClass().getName());
-                if (img != null)
-                    gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
+                if (ant instanceof ants.BodyguardAnt) {
+                    ants.BodyguardAnt bodyguard = (ants.BodyguardAnt) ant;
+
+                    // draw the protected ant first (behind the bodyguard)
+                    Ant containedAnt = bodyguard.getContainedAnt();
+                    if (containedAnt != null) {
+                        Image containedImg = ANT_IMAGES.get(containedAnt.getClass().getName());
+                        if (containedImg != null)
+                            // draw contained ant slightly offset so both are visible
+                            gc.drawImage(containedImg, rect[0] + PLACE_PAD_W + 8, rect[1] + PLACE_PAD_H);
+                    }
+
+                    // draw the bodyguard ant on top (slightly offset the other way)
+                    Image bodyguardImg = ANT_IMAGES.get(ant.getClass().getName());
+                    if (bodyguardImg != null)
+                        gc.drawImage(bodyguardImg, rect[0] + PLACE_PAD_W - 8, rect[1] + PLACE_PAD_H);
+                } else {
+                    // normal ant - draw normally
+                    Image img = ANT_IMAGES.get(ant.getClass().getName());
+                    if (img != null)
+                        gc.drawImage(img, rect[0] + PLACE_PAD_W, rect[1] + PLACE_PAD_H);
+                }
             }
         }
     }
@@ -353,13 +371,19 @@ public class AntGame {
             AnimPosition pos = entry.getValue();
             Bee bee = entry.getKey();
             if (bee instanceof GhostBee) {
-                if (GHOST_BEE_IMAGE != null) {
+                // draw ghost bee with ghost image
+                if (GHOST_BEE_IMAGE != null)
                     gc.drawImage(GHOST_BEE_IMAGE, pos.x, pos.y);
-                }
-            } else {
-                if (BEE_IMAGE != null) {
+            } else if (bee instanceof ZombieBee) {
+                // draw zombie bee with zombie image
+                if (ZOMBIE_BEE_IMAGE != null)
+                    gc.drawImage(ZOMBIE_BEE_IMAGE, pos.x, pos.y);
+                else if (BEE_IMAGE != null)
                     gc.drawImage(BEE_IMAGE, pos.x, pos.y);
-                }
+            } else {
+                // normal bee
+                if (BEE_IMAGE != null)
+                    gc.drawImage(BEE_IMAGE, pos.x, pos.y);
             }
         }
     }
@@ -623,7 +647,6 @@ public class AntGame {
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
-        // TODO: This needs fleshing out with rebuilding game play
         DifficultyLevel level = DifficultyLevel.forNumber(snapshot.difficultyLevel());
         AntColony colony = level.createColony();
         Hive hive = level.createHive();
