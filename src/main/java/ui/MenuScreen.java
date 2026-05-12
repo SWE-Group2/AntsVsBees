@@ -15,6 +15,11 @@ public class MenuScreen {
 
         ListView<String> savesList = new ListView<>();
         savesList.getItems().setAll(saves.list());
+        savesList.setPrefHeight(160);
+
+        ListView<String> historyList = new ListView<>();
+        historyList.getItems().setAll(saves.history().stream().map(Object::toString).toList());
+        historyList.setPrefHeight(180);
 
         Button newGame = new Button("New Game");
         newGame.setOnAction(e -> onNewGame.run());
@@ -29,7 +34,8 @@ public class MenuScreen {
                 onLoad.accept(saves.load(name));
         });
 
-        VBox root = new VBox(10, new Label("Ants vs. Some-Bees"), newGame, guide, savesList, load);
+        VBox root = new VBox(10, new Label("Ants vs. Some-Bees"), newGame, guide, new Label("Saved Games"), savesList,
+                load, new Label("Game History"), historyList);
         root.setPadding(new Insets(40));
         this.scene = new Scene(root, 1024, 768);
     }

@@ -10,6 +10,7 @@ import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -35,6 +36,7 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import places.WaterPlace;
 import save.BeeState;
+import save.GameResult;
 import save.GameSnapshot;
 import save.PlacedAnt;
 import save.WaveSpec;
@@ -111,6 +113,14 @@ public class AntGame {
     public static final double VOLUME_UP_X = FRAME_WIDTH - 130;
     public static final double VOLUME_BUTTON_Y = 5;
     public static final double VOLUME_BUTTON_SIZE = 32;
+    public static final double GAME_BUTTON_Y = 5;
+    public static final double GAME_BUTTON_HEIGHT = 32;
+    public static final double PAUSE_BUTTON_X = 300;
+    public static final double PAUSE_BUTTON_WIDTH = 105;
+    public static final double RESET_BUTTON_X = 415;
+    public static final double RESET_BUTTON_WIDTH = 80;
+    public static final double SAVE_BUTTON_X = 505;
+    public static final double SAVE_BUTTON_WIDTH = 70;
 
     // clickable areas
     private Map<double[], Place> colonyAreas;
@@ -121,6 +131,9 @@ public class AntGame {
     private double[] musicToggleArea;
     private double[] volumeDownArea;
     private double[] volumeUpArea;
+    private double[] pauseArea;
+    private double[] resetArea;
+    private double[] saveArea;
     private Place tunnelEnd;
     private Ant selectedAnt;
     private Ant hoveredAnt;
@@ -135,6 +148,7 @@ public class AntGame {
     private GraphicsContext gc;
     private boolean gameStarted = false;
     private boolean gameOver = false;
+    private boolean gamePaused = false;
     private boolean musicEnabled = true;
 
     // error message to show on screen when placement fails
@@ -144,16 +158,25 @@ public class AntGame {
     // Saving callback
     private final BiConsumer<String, GameSnapshot> onSaveRequested;
     private final Consumer<DifficultyLevel> onLevelCompleted;
+    private final Consumer<GameResult> onGameFinished;
+    private final Stage stage;
 
     /** Creates a new AntGame with JavaFX rendering */
     public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
             BiConsumer<String, GameSnapshot> saveRequested) {
-        this(colony, hive, difficultyLevel, stage, saveRequested, null);
+        this(colony, hive, difficultyLevel, stage, saveRequested, null, null);
     }
 
     /** Creates a new AntGame with JavaFX rendering */
     public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
             BiConsumer<String, GameSnapshot> saveRequested, Consumer<DifficultyLevel> levelCompleted) {
+        this(colony, hive, difficultyLevel, stage, saveRequested, levelCompleted, null);
+    }
+
+    /** Creates a new AntGame with JavaFX rendering */
+    public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
+            BiConsumer<String, GameSnapshot> saveRequested, Consumer<DifficultyLevel> levelCompleted,
+            Consumer<GameResult> gameFinished) {
         this.colony = colony;
         this.hive = hive;
         this.difficultyLevel = difficultyLevel;
@@ -161,6 +184,8 @@ public class AntGame {
         this.turn = 0;
         this.onSaveRequested = saveRequested;
         this.onLevelCompleted = levelCompleted;
+        this.onGameFinished = gameFinished;
+        this.stage = stage;
 
         ANT_TYPES = new ArrayList<>();
         ANT_IMAGES = new HashMap<>();
@@ -206,11 +231,7 @@ public class AntGame {
         Scene scene = new Scene(root, FRAME_WIDTH, FRAME_HEIGHT);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.S && gameStarted && !gameOver) {
-                if (onSaveRequested != null) {
-                    GameSnapshot snapshot = capture();
-                    System.out.println("[SAVE] " + snapshot);
-                    onSaveRequested.accept("save-turn-" + turn, snapshot);
-                }
+                saveGame();
             } else if (e.getCode() == KeyCode.H) {
                 showHelpDialog();
             }
@@ -326,10 +347,11 @@ public class AntGame {
                 clock.stop();
                 musicManager.stopMusic();
                 Platform.runLater(() -> {
+                    int score = finishGame("Lost");
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.setTitle("Bzzzzz!");
                     alert.setHeaderText(null);
-                    alert.setContentText("The ant queen has perished! Please try again.");
+                    alert.setContentText("The ant queen has perished! Score: " + score + ". Please try again.");
                     alert.showAndWait();
                     Platform.exit();
                 });
@@ -338,19 +360,21 @@ public class AntGame {
                 clock.stop();
                 musicManager.stopMusic();
                 difficultyLevel.next().ifPresentOrElse(nextLevel -> Platform.runLater(() -> {
+                    int score = finishGame("Completed Level");
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.setTitle("Level Complete");
                     alert.setHeaderText(difficultyLevel.displayName() + " complete!");
-                    alert.setContentText("Get ready for " + nextLevel.displayName() + ".");
+                    alert.setContentText("Score: " + score + ". Get ready for " + nextLevel.displayName() + ".");
                     alert.showAndWait();
                     if (onLevelCompleted != null) {
                         onLevelCompleted.accept(nextLevel);
                     }
                 }), () -> Platform.runLater(() -> {
+                    int score = finishGame("Won All Levels");
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.setTitle("Yaaaay!");
                     alert.setHeaderText(null);
-                    alert.setContentText("All levels are complete. You win!");
+                    alert.setContentText("All levels are complete. Final score: " + score + ".");
                     alert.showAndWait();
                     Platform.exit();
                 }));
@@ -371,6 +395,7 @@ public class AntGame {
         drawBees();
         drawLeaves();
         drawHelpButton();
+        drawGameControls();
         drawMusicControls();
         drawHoveredGuide();
 
@@ -400,6 +425,12 @@ public class AntGame {
             gc.setFont(Font.font("SansSerif", 16));
             gc.fillText("Press H or click Help for the guide", 350, 585);
             gc.fillText("Hover ants or bees to see abilities and advice", 350, 612);
+        } else if (gamePaused) {
+            gc.setFill(Color.rgb(0, 0, 0, 0.35));
+            gc.fillRect(0, 40, FRAME_WIDTH, FRAME_HEIGHT - 40);
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 38));
+            gc.fillText("PAUSED", 510, 520);
         }
     }
 
@@ -411,6 +442,22 @@ public class AntGame {
         gc.setFill(Color.BLACK);
         gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 14));
         gc.fillText("Help", helpArea[0] + 18, helpArea[1] + 21);
+    }
+
+    private void drawGameControls() {
+        drawButton(pauseArea, gamePaused ? "Resume" : "Pause", gameStarted && !gameOver);
+        drawButton(resetArea, "Reset", !gameOver);
+        drawButton(saveArea, "Save", !gameOver);
+    }
+
+    private void drawButton(double[] area, String label, boolean enabled) {
+        gc.setFill(enabled ? Color.WHITE : Color.LIGHTGRAY);
+        gc.fillRect(area[0], area[1], area[2], area[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(area[0], area[1], area[2], area[3]);
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 13));
+        gc.fillText(label, area[0] + 14, area[1] + 21);
     }
 
     private void drawMusicControls() {
@@ -598,6 +645,18 @@ public class AntGame {
             showHelpDialog();
             return false;
         }
+        if (contains(pauseArea, mouseX, mouseY)) {
+            toggleGamePause();
+            return false;
+        }
+        if (contains(resetArea, mouseX, mouseY)) {
+            resetGame();
+            return false;
+        }
+        if (contains(saveArea, mouseX, mouseY)) {
+            saveGame();
+            return false;
+        }
         if (contains(musicToggleArea, mouseX, mouseY)) {
             toggleMusic();
             return false;
@@ -608,6 +667,9 @@ public class AntGame {
         }
         if (contains(volumeUpArea, mouseX, mouseY)) {
             changeMusicVolume(0.1);
+            return false;
+        }
+        if (gamePaused) {
             return false;
         }
 
@@ -805,6 +867,9 @@ public class AntGame {
         musicToggleArea = new double[]{MUSIC_BUTTON_X, MUSIC_BUTTON_Y, MUSIC_BUTTON_WIDTH, MUSIC_BUTTON_HEIGHT};
         volumeDownArea = new double[]{VOLUME_DOWN_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE};
         volumeUpArea = new double[]{VOLUME_UP_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE};
+        pauseArea = new double[]{PAUSE_BUTTON_X, GAME_BUTTON_Y, PAUSE_BUTTON_WIDTH, GAME_BUTTON_HEIGHT};
+        resetArea = new double[]{RESET_BUTTON_X, GAME_BUTTON_Y, RESET_BUTTON_WIDTH, GAME_BUTTON_HEIGHT};
+        saveArea = new double[]{SAVE_BUTTON_X, GAME_BUTTON_Y, SAVE_BUTTON_WIDTH, GAME_BUTTON_HEIGHT};
         removerArea = new double[]{posX, posY, width, height};
         posX += width + 2;
 
@@ -840,7 +905,7 @@ public class AntGame {
     }
 
     private void showHelpDialog() {
-        boolean wasRunning = gameStarted && !gameOver && clock != null;
+        boolean wasRunning = gameStarted && !gamePaused && !gameOver && clock != null;
         if (wasRunning) {
             clock.stop();
         }
@@ -862,6 +927,71 @@ public class AntGame {
             clock.start();
         }
         render();
+    }
+
+    private void toggleGamePause() {
+        if (!gameStarted || gameOver || clock == null) {
+            return;
+        }
+
+        if (gamePaused) {
+            gamePaused = false;
+            lastFrameTime = 0;
+            clock.start();
+            if (musicEnabled) {
+                startMusic();
+            }
+        } else {
+            gamePaused = true;
+            clock.stop();
+            if (musicManager != null && musicManager.isPlaying()) {
+                musicManager.pauseMusic();
+            }
+        }
+        render();
+    }
+
+    private void resetGame() {
+        if (clock != null) {
+            clock.stop();
+        }
+        if (musicManager != null) {
+            musicManager.stopMusic();
+        }
+        gameOver = true;
+        new AntGame(difficultyLevel.createColony(), difficultyLevel.createHive(), difficultyLevel, stage,
+                onSaveRequested, onLevelCompleted, onGameFinished);
+    }
+
+    private void saveGame() {
+        if (gameOver || onSaveRequested == null) {
+            return;
+        }
+        GameSnapshot snapshot = capture();
+        if (clock != null) {
+            clock.stop();
+        }
+        if (musicManager != null) {
+            musicManager.stopMusic();
+        }
+        gameOver = true;
+        System.out.println("[SAVE] " + snapshot);
+        onSaveRequested.accept("save-" + difficultyLevel.number() + "-turn-" + turn + "-" + new Date(), snapshot);
+    }
+
+    private int finishGame(String outcome) {
+        int score = calculateScore(outcome);
+        if (onGameFinished != null) {
+            onGameFinished.accept(new GameResult(difficultyLevel.number(), score, outcome, turn, colony.getFood()));
+        }
+        return score;
+    }
+
+    private int calculateScore(String outcome) {
+        int outcomeBonus = "Lost".equals(outcome) ? 0 : 500;
+        int allLevelsBonus = "Won All Levels".equals(outcome) ? 1000 : 0;
+        return Math.max(0,
+                difficultyLevel.number() * 1000 + outcomeBonus + allLevelsBonus + colony.getFood() * 50 - turn * 10);
     }
 
     private void startMusic() {
@@ -924,19 +1054,77 @@ public class AntGame {
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
-        return fromSnapshot(snapshot, stage, onSave, null);
+        return fromSnapshot(snapshot, stage, onSave, null, null);
     }
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave,
             Consumer<DifficultyLevel> onLevelCompleted) {
+        return fromSnapshot(snapshot, stage, onSave, onLevelCompleted, null);
+    }
+
+    // reconstruct from snapshot — alternative constructor
+    public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave,
+            Consumer<DifficultyLevel> onLevelCompleted, Consumer<GameResult> onGameFinished) {
         DifficultyLevel level = DifficultyLevel.forNumber(snapshot.difficultyLevel());
-        AntColony colony = level.createColony();
-        Hive hive = level.createHive();
-        AntGame game = new AntGame(colony, hive, level, stage, onSave, onLevelCompleted);
+        AntColony colony = new AntColony(snapshot.numTunnels(), snapshot.tunnelLength(), snapshot.waterPlaceNames(),
+                snapshot.food());
+        Hive hive = new Hive(snapshot.beeArmorTemplate());
+        for (WaveSpec wave : snapshot.remainingWaves()) {
+            hive.addWave(wave.attackTime(), wave.numBees());
+        }
+        AntGame game = new AntGame(colony, hive, level, stage, onSave, onLevelCompleted, onGameFinished);
+        game.restoreAnts(snapshot);
+        game.restoreBees(snapshot);
         game.turn = snapshot.turn();
         game.render();
         return game;
+    }
+
+    private void restoreAnts(GameSnapshot snapshot) {
+        for (PlacedAnt placedAnt : snapshot.ants()) {
+            Place place = findPlace(placedAnt.placeName());
+            Ant ant = buildAnt(placedAnt.antClassName());
+            if (place != null && ant != null && place.canAddInsect(ant)) {
+                if (ant instanceof ants.QueenAnt queen) {
+                    queen.setRealQueen(true);
+                }
+                place.addInsect(ant);
+            }
+        }
+    }
+
+    private void restoreBees(GameSnapshot snapshot) {
+        for (BeeState beeState : snapshot.bees()) {
+            Place place = findPlace(beeState.placeName());
+            if (place != null) {
+                Bee bee = new Bee(beeState.armor());
+                if (beeState.slowedTurns() > 0) {
+                    bee.slow(beeState.slowedTurns());
+                }
+                if (beeState.stunnedTurns() > 0) {
+                    bee.stun(beeState.stunnedTurns());
+                }
+                place.addInsect(bee);
+                allBeePositions.put(bee, new AnimPosition(0, 0));
+                startAnimation(bee);
+            }
+        }
+    }
+
+    private Place findPlace(String name) {
+        if (name == null) {
+            return null;
+        }
+        if (colony.getQueenPlace().getName().equals(name)) {
+            return colony.getQueenPlace();
+        }
+        for (Place place : colony.getPlaces()) {
+            if (place.getName().equals(name)) {
+                return place;
+            }
+        }
+        return null;
     }
 
     // -------------------------

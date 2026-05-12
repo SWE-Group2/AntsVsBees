@@ -1,4 +1,6 @@
 package save;
 
-public record WaveSpec(int attackTime, int numBees) {
+import java.io.Serializable;
+
+public record WaveSpec(int attackTime, int numBees) implements Serializable {
 }

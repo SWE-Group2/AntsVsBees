@@ -1,4 +1,6 @@
 package save;
 
-public record PlacedAnt(String placeName, String antClassName) {
+import java.io.Serializable;
+
+public record PlacedAnt(String placeName, String antClassName) implements Serializable {
 }
