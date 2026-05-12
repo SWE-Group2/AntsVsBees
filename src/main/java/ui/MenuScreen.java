@@ -11,13 +11,16 @@ import save.SaveManager;
 public class MenuScreen {
     private final Scene scene;
 
-    public MenuScreen(SaveManager saves, Runnable onNewGame, Consumer<GameSnapshot> onLoad) {
+    public MenuScreen(SaveManager saves, Runnable onNewGame, Runnable onGuide, Consumer<GameSnapshot> onLoad) {
 
         ListView<String> savesList = new ListView<>();
         savesList.getItems().setAll(saves.list());
 
         Button newGame = new Button("New Game");
         newGame.setOnAction(e -> onNewGame.run());
+
+        Button guide = new Button("How to Play");
+        guide.setOnAction(e -> onGuide.run());
 
         Button load = new Button("Load");
         load.setOnAction(e -> {
@@ -26,7 +29,7 @@ public class MenuScreen {
                 onLoad.accept(saves.load(name));
         });
 
-        VBox root = new VBox(10, new Label("Ants vs. Some-Bees"), newGame, savesList, load);
+        VBox root = new VBox(10, new Label("Ants vs. Some-Bees"), newGame, guide, savesList, load);
         root.setPadding(new Insets(40));
         this.scene = new Scene(root, 1024, 768);
     }

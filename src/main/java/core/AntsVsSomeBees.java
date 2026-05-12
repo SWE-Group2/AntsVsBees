@@ -8,6 +8,7 @@ import javafx.stage.Stage;
 import save.GameSnapshot;
 import save.SaveManager;
 import ui.DifficultyScreen;
+import ui.GuideScreen;
 import ui.LoginScreen;
 import ui.MenuScreen;
 
@@ -45,8 +46,14 @@ public class AntsVsSomeBees extends Application {
     }
 
     private void showMenu() {
-        MenuScreen menu = new MenuScreen(savesForCurrentUser(), this::showDifficulty, this::startLoadedGame);
+        MenuScreen menu = new MenuScreen(savesForCurrentUser(), this::showDifficulty, this::showGuide,
+                this::startLoadedGame);
         stage.setScene(menu.getScene());
+    }
+
+    private void showGuide() {
+        GuideScreen guide = new GuideScreen(this::showMenu);
+        stage.setScene(guide.getScene());
     }
 
     private void showDifficulty() {
