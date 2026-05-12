@@ -1,7 +1,5 @@
 package core;
 
-import bees.GhostBee;
-import bees.ZombieBee;
 import factory.BeeFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
