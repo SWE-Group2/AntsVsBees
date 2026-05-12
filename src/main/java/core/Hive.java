@@ -26,7 +26,8 @@ public class Hive extends Place {
     /**
      * Creates a new hive with default bee chances.
      * 
-     * @param beeArmor The armor of the bees
+     * @param beeArmor
+     *            The armor of the bees
      */
     public Hive(int beeArmor) {
         this(beeArmor, 0.2, 0.2);
@@ -39,9 +40,12 @@ public class Hive extends Place {
     /**
      * Creates a new hive with custom bee spawn chances.
      * 
-     * @param beeArmor        The armor of the bees
-     * @param ghostBeeChance  Chance of spawning a GhostBee
-     * @param zombieBeeChance Chance of spawning a ZombieBee
+     * @param beeArmor
+     *            The armor of the bees
+     * @param ghostBeeChance
+     *            Chance of spawning a GhostBee
+     * @param zombieBeeChance
+     *            Chance of spawning a ZombieBee
      */
     public Hive(int beeArmor, double ghostBeeChance, double zombieBeeChance) {
         super(NAME, null);
@@ -56,8 +60,10 @@ public class Hive extends Place {
     /**
      * Moves in the invaders who are attacking the colony at the given time.
      * 
-     * @param colony      The colony to attack
-     * @param currentTime The current time
+     * @param colony
+     *            The colony to attack
+     * @param currentTime
+     *            The current time
      * @return An array of the bees who invaded
      */
     public Bee[] invade(AntColony colony, int currentTime) {
@@ -76,8 +82,10 @@ public class Hive extends Place {
     /**
      * Adds a wave of attacking bees using BeeFactory (Factory Pattern).
      * 
-     * @param attackTime When the bees will attack
-     * @param numBees    The number of bees to attack
+     * @param attackTime
+     *            When the bees will attack
+     * @param numBees
+     *            The number of bees to attack
      */
     public void addWave(int attackTime, int numBees) {
         Bee[] bees = new Bee[numBees];

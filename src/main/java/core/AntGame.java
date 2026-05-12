@@ -465,7 +465,8 @@ public class AntGame {
 
         gc.setFill(Color.BLACK);
         gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 18));
-        String heading = hoveredAnt != null ? guide.name + " - Cost: " + hoveredAnt.getFoodCost()
+        String heading = hoveredAnt != null
+                ? guide.name + " - Cost: " + hoveredAnt.getFoodCost()
                 : guide.name + " - Armor: " + hoveredBee.getArmor();
         gc.fillText(heading, x + 16, y + 28);
 
@@ -663,7 +664,7 @@ public class AntGame {
     private Bee getHoveredBee(double mouseX, double mouseY) {
         for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
             AnimPosition pos = entry.getValue();
-            double[] beeRect = { pos.x, pos.y, BEE_IMAGE_WIDTH, BEE_IMAGE_HEIGHT };
+            double[] beeRect = {pos.x, pos.y, BEE_IMAGE_WIDTH, BEE_IMAGE_HEIGHT};
             if (contains(beeRect, mouseX, mouseY)) {
                 return entry.getKey();
             }
@@ -674,7 +675,8 @@ public class AntGame {
     /**
      * Shows an error message on screen for a short time.
      * 
-     * @param message The error message to show
+     * @param message
+     *            The error message to show
      */
     private void showError(String message) {
         this.errorMessage = message;
@@ -780,14 +782,14 @@ public class AntGame {
                 row++;
             }
 
-            double[] clickable = { posX, posY, width, height };
+            double[] clickable = {posX, posY, width, height};
             colonyAreas.put(clickable, place);
             colonyRects.put(place, clickable);
             posX += width + PLACE_MARGIN;
         }
 
         // queen location
-        double[] queenRect = { 0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0 };
+        double[] queenRect = {0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0};
         tunnelEnd = colony.getQueenPlace();
         colonyAreas.put(queenRect, tunnelEnd);
         colonyRects.put(tunnelEnd, queenRect);
@@ -799,15 +801,15 @@ public class AntGame {
         double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
         double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
 
-        helpArea = new double[] { HELP_X, HELP_Y, HELP_WIDTH, HELP_HEIGHT };
-        musicToggleArea = new double[] { MUSIC_BUTTON_X, MUSIC_BUTTON_Y, MUSIC_BUTTON_WIDTH, MUSIC_BUTTON_HEIGHT };
-        volumeDownArea = new double[] { VOLUME_DOWN_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE };
-        volumeUpArea = new double[] { VOLUME_UP_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE };
-        removerArea = new double[] { posX, posY, width, height };
+        helpArea = new double[]{HELP_X, HELP_Y, HELP_WIDTH, HELP_HEIGHT};
+        musicToggleArea = new double[]{MUSIC_BUTTON_X, MUSIC_BUTTON_Y, MUSIC_BUTTON_WIDTH, MUSIC_BUTTON_HEIGHT};
+        volumeDownArea = new double[]{VOLUME_DOWN_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE};
+        volumeUpArea = new double[]{VOLUME_UP_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE};
+        removerArea = new double[]{posX, posY, width, height};
         posX += width + 2;
 
         for (String antType : ANT_TYPES) {
-            double[] clickable = { posX, posY, width, height };
+            double[] clickable = {posX, posY, width, height};
             Ant ant = buildAnt(antType);
             if (ant != null)
                 antSelectorAreas.put(clickable, ant);
@@ -891,7 +893,7 @@ public class AntGame {
         }
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private Ant buildAnt(String antType) {
         try {
             Class antClass = Class.forName(antType);
