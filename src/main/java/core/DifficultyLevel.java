@@ -1,6 +1,7 @@
 package core;
 
 import java.util.List;
+import java.util.Optional;
 
 public final class DifficultyLevel {
     private static final List<DifficultyLevel> LEVELS = List.of(new DifficultyLevel(1, 3, 6, 3, 4, 2, 5, 3, 1, 3, 0.10),
@@ -48,6 +49,10 @@ public final class DifficultyLevel {
 
     public static DifficultyLevel forNumber(int number) {
         return LEVELS.stream().filter(level -> level.number == number).findFirst().orElse(LEVELS.get(0));
+    }
+
+    public Optional<DifficultyLevel> next() {
+        return LEVELS.stream().filter(level -> level.number == number + 1).findFirst();
     }
 
     public int number() {

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -99,9 +100,17 @@ public class AntGame {
     public static final double LEAF_END_Y = 30;
     public static final double LEAF_SIZE = 40;
     public static final double HELP_X = FRAME_WIDTH - 92;
-    public static final double HELP_Y = 18;
+    public static final double HELP_Y = 5;
     public static final double HELP_WIDTH = 72;
     public static final double HELP_HEIGHT = 32;
+    public static final double MUSIC_BUTTON_X = FRAME_WIDTH - 350;
+    public static final double MUSIC_BUTTON_Y = 5;
+    public static final double MUSIC_BUTTON_WIDTH = 110;
+    public static final double MUSIC_BUTTON_HEIGHT = 32;
+    public static final double VOLUME_DOWN_X = FRAME_WIDTH - 232;
+    public static final double VOLUME_UP_X = FRAME_WIDTH - 130;
+    public static final double VOLUME_BUTTON_Y = 5;
+    public static final double VOLUME_BUTTON_SIZE = 32;
 
     // clickable areas
     private Map<double[], Place> colonyAreas;
@@ -109,6 +118,9 @@ public class AntGame {
     private Map<double[], Ant> antSelectorAreas;
     private double[] removerArea;
     private double[] helpArea;
+    private double[] musicToggleArea;
+    private double[] volumeDownArea;
+    private double[] volumeUpArea;
     private Place tunnelEnd;
     private Ant selectedAnt;
     private Ant hoveredAnt;
@@ -123,6 +135,7 @@ public class AntGame {
     private GraphicsContext gc;
     private boolean gameStarted = false;
     private boolean gameOver = false;
+    private boolean musicEnabled = true;
 
     // error message to show on screen when placement fails
     private String errorMessage = null;
@@ -130,16 +143,24 @@ public class AntGame {
 
     // Saving callback
     private final BiConsumer<String, GameSnapshot> onSaveRequested;
+    private final Consumer<DifficultyLevel> onLevelCompleted;
 
     /** Creates a new AntGame with JavaFX rendering */
     public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
             BiConsumer<String, GameSnapshot> saveRequested) {
+        this(colony, hive, difficultyLevel, stage, saveRequested, null);
+    }
+
+    /** Creates a new AntGame with JavaFX rendering */
+    public AntGame(AntColony colony, Hive hive, DifficultyLevel difficultyLevel, Stage stage,
+            BiConsumer<String, GameSnapshot> saveRequested, Consumer<DifficultyLevel> levelCompleted) {
         this.colony = colony;
         this.hive = hive;
         this.difficultyLevel = difficultyLevel;
         this.frameCount = 0;
         this.turn = 0;
         this.onSaveRequested = saveRequested;
+        this.onLevelCompleted = levelCompleted;
 
         ANT_TYPES = new ArrayList<>();
         ANT_IMAGES = new HashMap<>();
@@ -166,6 +187,7 @@ public class AntGame {
             if (shouldStartGame && !gameStarted) {
                 gameStarted = true;
                 clock.start();
+                startMusic();
             }
             render();
         });
@@ -200,12 +222,13 @@ public class AntGame {
         stage.setOnCloseRequest(e -> {
             if (clock != null)
                 clock.stop();
+            if (musicManager != null)
+                musicManager.stopMusic();
             Platform.exit();
         });
         stage.show();
 
         musicManager = new MusicManager();
-        musicManager.playBackgroundMusic("audio/consumerism.mp3");
 
         // setup game loop
         clock = new AnimationTimer() {
@@ -301,6 +324,7 @@ public class AntGame {
             if (colony.queenHasBees()) {
                 gameOver = true;
                 clock.stop();
+                musicManager.stopMusic();
                 Platform.runLater(() -> {
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.setTitle("Bzzzzz!");
@@ -312,14 +336,24 @@ public class AntGame {
             } else if (hive.getBees().length + colony.getAllBees().size() == 0) {
                 gameOver = true;
                 clock.stop();
-                Platform.runLater(() -> {
+                musicManager.stopMusic();
+                difficultyLevel.next().ifPresentOrElse(nextLevel -> Platform.runLater(() -> {
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Level Complete");
+                    alert.setHeaderText(difficultyLevel.displayName() + " complete!");
+                    alert.setContentText("Get ready for " + nextLevel.displayName() + ".");
+                    alert.showAndWait();
+                    if (onLevelCompleted != null) {
+                        onLevelCompleted.accept(nextLevel);
+                    }
+                }), () -> Platform.runLater(() -> {
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.setTitle("Yaaaay!");
                     alert.setHeaderText(null);
-                    alert.setContentText("All bees are vanquished. You win!");
+                    alert.setContentText("All levels are complete. You win!");
                     alert.showAndWait();
                     Platform.exit();
-                });
+                }));
             }
         }
     }
@@ -337,6 +371,7 @@ public class AntGame {
         drawBees();
         drawLeaves();
         drawHelpButton();
+        drawMusicControls();
         drawHoveredGuide();
 
         // text
@@ -378,6 +413,34 @@ public class AntGame {
         gc.fillText("Help", helpArea[0] + 18, helpArea[1] + 21);
     }
 
+    private void drawMusicControls() {
+        gc.setFill(gameStarted ? Color.WHITE : Color.LIGHTGRAY);
+        gc.fillRect(musicToggleArea[0], musicToggleArea[1], musicToggleArea[2], musicToggleArea[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(musicToggleArea[0], musicToggleArea[1], musicToggleArea[2], musicToggleArea[3]);
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 13));
+        gc.fillText(musicManager != null && musicManager.isPlaying() ? "Pause Music" : "Play Music",
+                musicToggleArea[0] + 22, musicToggleArea[1] + 21);
+
+        drawVolumeButton(volumeDownArea, "-");
+        drawVolumeButton(volumeUpArea, "+");
+
+        gc.setFont(Font.font("SansSerif", 13));
+        int volumePercent = musicManager == null ? 50 : (int) Math.round(musicManager.getVolume() * 100);
+        gc.fillText("Vol " + volumePercent + "%", volumeDownArea[0] + 38, volumeDownArea[1] + 21);
+    }
+
+    private void drawVolumeButton(double[] area, String label) {
+        gc.setFill(Color.WHITE);
+        gc.fillRect(area[0], area[1], area[2], area[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(area[0], area[1], area[2], area[3]);
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 18));
+        gc.fillText(label, area[0] + 11, area[1] + 22);
+    }
+
     private void drawHoveredGuide() {
         if (hoveredAnt == null && hoveredBee == null) {
             return;
@@ -402,8 +465,7 @@ public class AntGame {
 
         gc.setFill(Color.BLACK);
         gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 18));
-        String heading = hoveredAnt != null
-                ? guide.name + " - Cost: " + hoveredAnt.getFoodCost()
+        String heading = hoveredAnt != null ? guide.name + " - Cost: " + hoveredAnt.getFoodCost()
                 : guide.name + " - Armor: " + hoveredBee.getArmor();
         gc.fillText(heading, x + 16, y + 28);
 
@@ -535,6 +597,18 @@ public class AntGame {
             showHelpDialog();
             return false;
         }
+        if (contains(musicToggleArea, mouseX, mouseY)) {
+            toggleMusic();
+            return false;
+        }
+        if (contains(volumeDownArea, mouseX, mouseY)) {
+            changeMusicVolume(-0.1);
+            return false;
+        }
+        if (contains(volumeUpArea, mouseX, mouseY)) {
+            changeMusicVolume(0.1);
+            return false;
+        }
 
         // check colony areas
         for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
@@ -589,7 +663,7 @@ public class AntGame {
     private Bee getHoveredBee(double mouseX, double mouseY) {
         for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
             AnimPosition pos = entry.getValue();
-            double[] beeRect = {pos.x, pos.y, BEE_IMAGE_WIDTH, BEE_IMAGE_HEIGHT};
+            double[] beeRect = { pos.x, pos.y, BEE_IMAGE_WIDTH, BEE_IMAGE_HEIGHT };
             if (contains(beeRect, mouseX, mouseY)) {
                 return entry.getKey();
             }
@@ -600,8 +674,7 @@ public class AntGame {
     /**
      * Shows an error message on screen for a short time.
      * 
-     * @param message
-     *            The error message to show
+     * @param message The error message to show
      */
     private void showError(String message) {
         this.errorMessage = message;
@@ -707,14 +780,14 @@ public class AntGame {
                 row++;
             }
 
-            double[] clickable = {posX, posY, width, height};
+            double[] clickable = { posX, posY, width, height };
             colonyAreas.put(clickable, place);
             colonyRects.put(place, clickable);
             posX += width + PLACE_MARGIN;
         }
 
         // queen location
-        double[] queenRect = {0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0};
+        double[] queenRect = { 0, PLACE_Y + (row - 1) * (height + PLACE_MARGIN) / 2, 0, 0 };
         tunnelEnd = colony.getQueenPlace();
         colonyAreas.put(queenRect, tunnelEnd);
         colonyRects.put(tunnelEnd, queenRect);
@@ -726,12 +799,15 @@ public class AntGame {
         double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
         double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
 
-        helpArea = new double[]{HELP_X, HELP_Y, HELP_WIDTH, HELP_HEIGHT};
-        removerArea = new double[]{posX, posY, width, height};
+        helpArea = new double[] { HELP_X, HELP_Y, HELP_WIDTH, HELP_HEIGHT };
+        musicToggleArea = new double[] { MUSIC_BUTTON_X, MUSIC_BUTTON_Y, MUSIC_BUTTON_WIDTH, MUSIC_BUTTON_HEIGHT };
+        volumeDownArea = new double[] { VOLUME_DOWN_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE };
+        volumeUpArea = new double[] { VOLUME_UP_X, VOLUME_BUTTON_Y, VOLUME_BUTTON_SIZE, VOLUME_BUTTON_SIZE };
+        removerArea = new double[] { posX, posY, width, height };
         posX += width + 2;
 
         for (String antType : ANT_TYPES) {
-            double[] clickable = {posX, posY, width, height};
+            double[] clickable = { posX, posY, width, height };
             Ant ant = buildAnt(antType);
             if (ant != null)
                 antSelectorAreas.put(clickable, ant);
@@ -786,7 +862,36 @@ public class AntGame {
         render();
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void startMusic() {
+        if (musicEnabled && musicManager != null) {
+            musicManager.playBackgroundMusic("audio/consumerism.mp3");
+        }
+    }
+
+    private void toggleMusic() {
+        if (!gameStarted || musicManager == null) {
+            return;
+        }
+
+        if (musicManager.isPlaying()) {
+            musicManager.pauseMusic();
+            musicEnabled = false;
+        } else {
+            musicEnabled = true;
+            musicManager.resumeMusic();
+            if (!musicManager.isPlaying()) {
+                musicManager.playBackgroundMusic("audio/consumerism.mp3");
+            }
+        }
+    }
+
+    private void changeMusicVolume(double amount) {
+        if (musicManager != null) {
+            musicManager.setVolume(musicManager.getVolume() + amount);
+        }
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Ant buildAnt(String antType) {
         try {
             Class antClass = Class.forName(antType);
@@ -817,10 +922,16 @@ public class AntGame {
 
     // reconstruct from snapshot — alternative constructor
     public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave) {
+        return fromSnapshot(snapshot, stage, onSave, null);
+    }
+
+    // reconstruct from snapshot — alternative constructor
+    public static AntGame fromSnapshot(GameSnapshot snapshot, Stage stage, BiConsumer<String, GameSnapshot> onSave,
+            Consumer<DifficultyLevel> onLevelCompleted) {
         DifficultyLevel level = DifficultyLevel.forNumber(snapshot.difficultyLevel());
         AntColony colony = level.createColony();
         Hive hive = level.createHive();
-        AntGame game = new AntGame(colony, hive, level, stage, onSave);
+        AntGame game = new AntGame(colony, hive, level, stage, onSave, onLevelCompleted);
         game.turn = snapshot.turn();
         game.render();
         return game;

@@ -1,14 +1,20 @@
 package core;
 
+import java.net.URL;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 
-import java.net.URL;
-
 public class MusicManager {
     private MediaPlayer mediaPlayer;
+    private String currentFilePath;
+    private double volume = 0.5;
 
     public void playBackgroundMusic(String filePath) {
+        if (mediaPlayer != null && filePath.equals(currentFilePath)) {
+            mediaPlayer.play();
+            return;
+        }
+
         URL resource = MusicManager.class.getClassLoader().getResource(filePath);
 
         if (resource == null) {
@@ -18,9 +24,10 @@ public class MusicManager {
 
         Media media = new Media(resource.toExternalForm());
         mediaPlayer = new MediaPlayer(media);
+        currentFilePath = filePath;
 
         mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE); // loop forever
-        mediaPlayer.setVolume(0.5); // 0.0 to 1.0
+        mediaPlayer.setVolume(volume); // 0.0 to 1.0
 
         mediaPlayer.play();
     }
@@ -44,8 +51,17 @@ public class MusicManager {
     }
 
     public void setVolume(double volume) {
+        this.volume = Math.max(0.0, Math.min(1.0, volume));
         if (mediaPlayer != null) {
-            mediaPlayer.setVolume(volume);
+            mediaPlayer.setVolume(this.volume);
         }
+    }
+
+    public double getVolume() {
+        return volume;
+    }
+
+    public boolean isPlaying() {
+        return mediaPlayer != null && mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING;
     }
 }

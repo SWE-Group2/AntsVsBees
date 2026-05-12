@@ -63,19 +63,23 @@ public class AntsVsSomeBees extends Application {
 
     private void startNewGame(int difficulty) {
         DifficultyLevel level = DifficultyLevel.forNumber(difficulty);
+        startLevel(level);
+    }
+
+    private void startLevel(DifficultyLevel level) {
         AntColony colony = level.createColony();
         Hive hive = level.createHive();
         new AntGame(colony, hive, level, stage, (name, snapshot) -> {
             savesForCurrentUser().save(name, snapshot);
             showMenu();
-        });
+        }, this::startLevel);
     }
 
     private void startLoadedGame(GameSnapshot s) {
         AntGame.fromSnapshot(s, stage, (name, snapshot) -> {
             savesForCurrentUser().save(name, snapshot);
             showMenu();
-        });
+        }, this::startLevel);
     }
 
     public static void main(String[] args) {
