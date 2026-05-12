@@ -23,6 +23,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
@@ -35,6 +37,7 @@ import save.BeeState;
 import save.GameSnapshot;
 import save.PlacedAnt;
 import save.WaveSpec;
+import ui.GuideScreen;
 
 /**
  * A class that controls the graphical game of Ants vs. Some-Bees. Converted from Swing to JavaFX.
@@ -88,21 +91,28 @@ public class AntGame {
     public static final double PLACE_PAD_H = 10;
     public static final double PLACE_MARGIN = 10;
     public static final double HIVE_X = 1075;
-    public static final double HIVE_Y = 300;
+    public static final double HIVE_Y = 250;
     public static final double CRYPT_HEIGHT = 650;
     public static final double LEAF_START_X = 30;
     public static final double LEAF_START_Y = 30;
     public static final double LEAF_END_X = 50;
     public static final double LEAF_END_Y = 30;
     public static final double LEAF_SIZE = 40;
+    public static final double HELP_X = FRAME_WIDTH - 92;
+    public static final double HELP_Y = 18;
+    public static final double HELP_WIDTH = 72;
+    public static final double HELP_HEIGHT = 32;
 
     // clickable areas
     private Map<double[], Place> colonyAreas;
     private Map<Place, double[]> colonyRects;
     private Map<double[], Ant> antSelectorAreas;
     private double[] removerArea;
+    private double[] helpArea;
     private Place tunnelEnd;
     private Ant selectedAnt;
+    private Ant hoveredAnt;
+    private Bee hoveredBee;
 
     // animations
     private Map<Bee, AnimPosition> allBeePositions;
@@ -152,11 +162,21 @@ public class AntGame {
 
         // mouse click handling
         canvas.setOnMousePressed(e -> {
-            handleClick(e.getX(), e.getY());
-            if (!gameStarted) {
+            boolean shouldStartGame = handleClick(e.getX(), e.getY());
+            if (shouldStartGame && !gameStarted) {
                 gameStarted = true;
                 clock.start();
             }
+            render();
+        });
+        canvas.setOnMouseMoved(e -> {
+            hoveredAnt = getHoveredAnt(e.getX(), e.getY());
+            hoveredBee = hoveredAnt == null ? getHoveredBee(e.getX(), e.getY()) : null;
+            render();
+        });
+        canvas.setOnMouseExited(e -> {
+            hoveredAnt = null;
+            hoveredBee = null;
             render();
         });
 
@@ -169,6 +189,8 @@ public class AntGame {
                     System.out.println("[SAVE] " + snapshot);
                     onSaveRequested.accept("save-turn-" + turn, snapshot);
                 }
+            } else if (e.getCode() == KeyCode.H) {
+                showHelpDialog();
             }
         });
 
@@ -314,6 +336,8 @@ public class AntGame {
         drawColony();
         drawBees();
         drawLeaves();
+        drawHelpButton();
+        drawHoveredGuide();
 
         // text
         String antString = "none";
@@ -338,7 +362,54 @@ public class AntGame {
             gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
             gc.setFill(Color.RED);
             gc.fillText("CLICK TO START", 350, 550);
+            gc.setFont(Font.font("SansSerif", 16));
+            gc.fillText("Press H or click Help for the guide", 350, 585);
+            gc.fillText("Hover ants or bees to see abilities and advice", 350, 612);
         }
+    }
+
+    private void drawHelpButton() {
+        gc.setFill(Color.WHITE);
+        gc.fillRect(helpArea[0], helpArea[1], helpArea[2], helpArea[3]);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(helpArea[0], helpArea[1], helpArea[2], helpArea[3]);
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 14));
+        gc.fillText("Help", helpArea[0] + 18, helpArea[1] + 21);
+    }
+
+    private void drawHoveredGuide() {
+        if (hoveredAnt == null && hoveredBee == null) {
+            return;
+        }
+
+        GameGuideData.GuideEntry guide = hoveredAnt != null
+                ? GameGuideData.ANT_GUIDES.get(hoveredAnt.getClass().getSimpleName())
+                : GameGuideData.BEE_GUIDES.get(hoveredBee.getClass().getSimpleName());
+        if (guide == null) {
+            return;
+        }
+
+        double x = 20;
+        double y = FRAME_HEIGHT - 132;
+        double width = 640;
+        double height = 112;
+
+        gc.setFill(Color.rgb(255, 255, 245));
+        gc.fillRect(x, y, width, height);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(x, y, width, height);
+
+        gc.setFill(Color.BLACK);
+        gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 18));
+        String heading = hoveredAnt != null
+                ? guide.name + " - Cost: " + hoveredAnt.getFoodCost()
+                : guide.name + " - Armor: " + hoveredBee.getArmor();
+        gc.fillText(heading, x + 16, y + 28);
+
+        gc.setFont(Font.font("SansSerif", 14));
+        gc.fillText("Ability: " + guide.ability, x + 16, y + 56);
+        gc.fillText((hoveredAnt != null ? "Use: " : "Threat: ") + guide.use, x + 16, y + 82);
     }
 
     private void drawColony() {
@@ -459,7 +530,12 @@ public class AntGame {
     // CLICK HANDLING
     // -------------------------
 
-    private synchronized void handleClick(double mouseX, double mouseY) {
+    private synchronized boolean handleClick(double mouseX, double mouseY) {
+        if (contains(helpArea, mouseX, mouseY)) {
+            showHelpDialog();
+            return false;
+        }
+
         // check colony areas
         for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
             double[] rect = entry.getKey();
@@ -481,7 +557,7 @@ public class AntGame {
                         System.out.println("Cannot place ant here: " + e.getMessage());
                     }
                 }
-                return;
+                return true;
             }
         }
 
@@ -490,7 +566,7 @@ public class AntGame {
             double[] rect = entry.getKey();
             if (contains(rect, mouseX, mouseY)) {
                 selectedAnt = entry.getValue();
-                return;
+                return true;
             }
         }
 
@@ -498,6 +574,27 @@ public class AntGame {
         if (contains(removerArea, mouseX, mouseY)) {
             selectedAnt = null;
         }
+        return true;
+    }
+
+    private Ant getHoveredAnt(double mouseX, double mouseY) {
+        for (Map.Entry<double[], Ant> entry : antSelectorAreas.entrySet()) {
+            if (contains(entry.getKey(), mouseX, mouseY)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private Bee getHoveredBee(double mouseX, double mouseY) {
+        for (Map.Entry<Bee, AnimPosition> entry : allBeePositions.entrySet()) {
+            AnimPosition pos = entry.getValue();
+            double[] beeRect = {pos.x, pos.y, BEE_IMAGE_WIDTH, BEE_IMAGE_HEIGHT};
+            if (contains(beeRect, mouseX, mouseY)) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
     /**
@@ -584,8 +681,14 @@ public class AntGame {
     private void initializeBees() {
         Bee[] bees = this.hive.getBees();
         for (Bee bee : bees) {
-            allBeePositions.put(bee, new AnimPosition((int) (HIVE_X + (20 * Math.random() - 10)),
-                    (int) (HIVE_Y + (100 * Math.random() - 50))));
+            if (bee instanceof GhostBee) {
+                allBeePositions.put(bee, new AnimPosition((int) (HIVE_X), (int) (HIVE_Y + (100))));
+            } else if (bee instanceof ZombieBee) {
+                allBeePositions.put(bee, new AnimPosition((int) (HIVE_X), (int) (HIVE_Y + (200))));
+            } else {
+                allBeePositions.put(bee, new AnimPosition((int) (HIVE_X), (int) (HIVE_Y + (300))));
+            }
+
         }
     }
 
@@ -623,6 +726,7 @@ public class AntGame {
         double width = ANT_IMAGE_WIDTH + 2 * PANEL_PAD_W;
         double height = ANT_IMAGE_HEIGHT + 2 * PANEL_PAD_H;
 
+        helpArea = new double[]{HELP_X, HELP_Y, HELP_WIDTH, HELP_HEIGHT};
         removerArea = new double[]{posX, posY, width, height};
         posX += width + 2;
 
@@ -655,6 +759,31 @@ public class AntGame {
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;
         return Color.rgb(r, g, b);
+    }
+
+    private void showHelpDialog() {
+        boolean wasRunning = gameStarted && !gameOver && clock != null;
+        if (wasRunning) {
+            clock.stop();
+        }
+
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle("How to Play");
+        alert.setHeaderText("How to Play");
+        alert.getButtonTypes().setAll(ButtonType.CLOSE);
+
+        ScrollPane guide = new ScrollPane(GuideScreen.createGuideContent(620, false));
+        guide.setFitToWidth(true);
+        guide.setPrefViewportWidth(700);
+        guide.setPrefViewportHeight(520);
+        alert.getDialogPane().setContent(guide);
+        alert.showAndWait();
+
+        if (wasRunning) {
+            lastFrameTime = 0;
+            clock.start();
+        }
+        render();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
