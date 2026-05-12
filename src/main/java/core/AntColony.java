@@ -1,79 +1,70 @@
 package core;
 
 import ants.QueenAnt;
+import exceptions.InsufficientFoodException;
+import exceptions.InvalidPlacementException;
 import java.util.ArrayList;
 import places.WaterPlace;
 
 /**
- * An entire colony of ants and their tunnels.
+ * An entire colony of ants and their tunnels. Uses custom exceptions for better error handling.
  *
  * @author Joel
  * @version Fall 2014
  */
 public class AntColony {
-    public static final String QUEEN_NAME = "AntQueen"; // name of the Queen's place
+    public static final String QUEEN_NAME = "AntQueen";
     public static final int MAX_TUNNEL_LENGTH = 8;
 
-    private int food; // amount of food available
-    private Place queenPlace; // where the queen is
-    private ArrayList<Place> places; // the places in the colony
-    private ArrayList<Place> beeEntrances; // places which bees can enter (the starts of the tunnels)
+    private int food;
+    private Place queenPlace;
+    private ArrayList<Place> places;
+    private ArrayList<Place> beeEntrances;
 
     /**
      * Creates a new ant colony with the given layout.
-     *
+     * 
      * @param numTunnels
      *            The number of tunnels (paths)
      * @param tunnelLength
      *            The length of each tunnel
      * @param moatFrequency
-     *            The frequency of which moats (water areas) appear. 0 means that there are no moats
+     *            The frequency of water areas. 0 means no water
      * @param startingFood
-     *            The starting food for this colony.
+     *            The starting food for this colony
      */
     public AntColony(int numTunnels, int tunnelLength, int moatFrequency, int startingFood) {
-        // simulation values
         this.food = startingFood;
-
-        // init variables
         places = new ArrayList<Place>();
         beeEntrances = new ArrayList<Place>();
-        queenPlace = new Place(QUEEN_NAME); // magic variable namexw
+        queenPlace = new Place(QUEEN_NAME);
         int remainingMoatPlaces = moatFrequency;
 
-        tunnelLength = Math.min(tunnelLength, MAX_TUNNEL_LENGTH); // don't go off the screen!
-        // set up tunnels, as a kind of linked-list
-        Place curr, prev; // reference to current exit of the tunnel
+        tunnelLength = Math.min(tunnelLength, MAX_TUNNEL_LENGTH);
+        Place curr, prev;
         for (int tunnel = 0; tunnel < numTunnels; tunnel++) {
             int moatIndex = -1;
             if (remainingMoatPlaces > 1) {
                 moatIndex = (int) (Math.random() * (tunnelLength - 1 - 0 + 1)) + 0;
             }
-            curr = queenPlace; // start the tunnel's at the queen
+            curr = queenPlace;
             for (int step = 0; step < tunnelLength; step++) {
-                prev = curr; // keep track of the previous guy (who we will exit to)
+                prev = curr;
                 if (step == moatIndex) {
-                    curr = new WaterPlace("tunnel[" + tunnel + "-" + step + "]", prev); // create water place with an
-                    // exit that
-                    // is
-                    // the previous spot
+                    curr = new WaterPlace("tunnel[" + tunnel + "-" + step + "]", prev);
                 } else {
-                    curr = new Place("tunnel[" + tunnel + "-" + step + "]", prev); // create new place with an exit that
-                    // is
-                    // the previous spot
+                    curr = new Place("tunnel[" + tunnel + "-" + step + "]", prev);
                 }
-
-                prev.setEntrance(curr); // the previous person's entrance is the new spot
-                places.add(curr); // add new place to the list
+                prev.setEntrance(curr);
+                places.add(curr);
             }
-            beeEntrances.add(curr); // current place is last item in the tunnel, so mark that it is a bee entrance
-        } // loop to next tunnel
+            beeEntrances.add(curr);
+        }
     }
 
     /**
-     * Returns an array of Places in this colony. Places are ordered by tunnel, with each tunnel's places listed start
-     * to end.
-     *
+     * Returns an array of Places in this colony.
+     * 
      * @return The tunnels in this colony
      */
     public Place[] getPlaces() {
@@ -81,18 +72,23 @@ public class AntColony {
     }
 
     /**
-     * Returns an array of places that the bees can enter into the colony
-     *
+     * Returns an array of places that the bees can enter into the colony.
+     * 
      * @return Places the bees can enter
      */
     public Place[] getBeeEntrances() {
         return beeEntrances.toArray(new Place[0]);
     }
 
+    /**
+     * Returns the place where the real QueenAnt is located.
+     * 
+     * @return The place of the real queen, or null if not placed yet
+     */
     public Place getRealQueenColonyPlace() {
         for (Place p : places) {
             Ant mainAnt = p.getMainAnt();
-            if (mainAnt != null && mainAnt instanceof QueenAnt && ((QueenAnt) mainAnt).isRealQueen()) {
+            if (mainAnt instanceof QueenAnt && ((QueenAnt) mainAnt).isRealQueen()) {
                 return p;
             }
         }
@@ -100,8 +96,8 @@ public class AntColony {
     }
 
     /**
-     * Returns the queen's location
-     *
+     * Returns the queen's location.
+     * 
      * @return The queen's location
      */
     public Place getQueenPlace() {
@@ -109,8 +105,8 @@ public class AntColony {
     }
 
     /**
-     * Returns the amount of available food
-     *
+     * Returns the amount of available food.
+     * 
      * @return the amount of available food
      */
     public int getFood() {
@@ -118,18 +114,19 @@ public class AntColony {
     }
 
     /**
-     * Increases the amount of available food
-     *
+     * Increases the amount of available food. Pre-condition: amount must be greater than 0
+     * 
      * @param amount
      *            The amount to increase by
      */
     public void increaseFood(int amount) {
+        assert amount > 0 : "Food increase amount must be greater than 0";
         food += amount;
     }
 
     /**
-     * Returns if there are any bees in the queen's location (and so the game should be lost)
-     *
+     * Returns if there are any bees in the queen's location.
+     * 
      * @return if there are any bees in the queen's location
      */
     public boolean queenHasBees() {
@@ -140,29 +137,42 @@ public class AntColony {
         return this.queenPlace.getBees().length > 0;
     }
 
-    // place an ant if there is enough food available
     /**
-     * Places the given ant in the given tunnel IF there is enough available food. Otherwise has no effect
+     * Places the given ant in the given tunnel IF there is enough available food. Throws custom exceptions instead of
+     * printing error messages.
      *
      * @param place
      *            Where to place the ant
      * @param ant
      *            The ant to place
+     * @throws InsufficientFoodException
+     *             if not enough food
+     * @throws InvalidPlacementException
+     *             if ant cannot be placed here
      */
     public void deployAnt(Place place, Ant ant) {
         if (ant instanceof QueenAnt && getRealQueenColonyPlace() == null) {
             ((QueenAnt) ant).setRealQueen(true);
         }
-        if (place.canAddInsect(ant) && this.food >= ant.getFoodCost()) {
-            this.food -= ant.getFoodCost();
-            place.addInsect(ant);
-        } else
-            System.out.println("Not enough food remains to place " + ant);
+
+        // check if placement is valid (e.g. watersafe check)
+        if (!place.canAddInsect(ant)) {
+            throw new InvalidPlacementException(ant.getClass().getSimpleName() + " cannot be placed in "
+                    + place.getName() + " — invalid placement.");
+        }
+
+        // check if enough food
+        if (this.food < ant.getFoodCost()) {
+            throw new InsufficientFoodException(ant.getFoodCost(), this.food);
+        }
+
+        this.food -= ant.getFoodCost();
+        place.addInsect(ant);
     }
 
     /**
-     * Removes the ant inhabiting the given Place
-     *
+     * Removes the ant inhabiting the given Place.
+     * 
      * @param place
      *            Where to remove the ant from
      */
@@ -177,8 +187,8 @@ public class AntColony {
     }
 
     /**
-     * Returns a list of all the ants currently in the colony
-     *
+     * Returns a list of all the ants currently in the colony.
+     * 
      * @return a list of all the ants currently in the colony
      */
     public ArrayList<Ant> getAllAnts() {
@@ -191,8 +201,8 @@ public class AntColony {
     }
 
     /**
-     * Returns a list of all the bees currently in the colony
-     *
+     * Returns a list of all the bees currently in the colony.
+     * 
      * @return a list of all the bees currently in the colony
      */
     public ArrayList<Bee> getAllBees() {

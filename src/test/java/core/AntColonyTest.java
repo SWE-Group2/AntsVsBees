@@ -4,10 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ants.HarvesterAnt;
 import ants.ThrowerAnt;
+import exceptions.InsufficientFoodException;
 import org.junit.jupiter.api.Test;
 
 class AntColonyTest {
@@ -32,14 +34,18 @@ class AntColonyTest {
     }
 
     @Test
-    void deployAntDoesNothingWhenFoodIsInsufficient() {
+    void deployAntThrowsExceptionWhenFoodIsInsufficient() {
         AntColony colony = new AntColony(1, 3, 0, 1);
         Place place = colony.getPlaces()[0];
         ThrowerAnt ant = new ThrowerAnt();
 
-        colony.deployAnt(place, ant);
+        // now throws InsufficientFoodException instead of silently doing nothing
+        assertThrows(InsufficientFoodException.class, () -> colony.deployAnt(place, ant));
 
+        // ant should not have been placed
         assertNull(place.getAnt());
+
+        // food should not have been spent
         assertEquals(1, colony.getFood());
     }
 
