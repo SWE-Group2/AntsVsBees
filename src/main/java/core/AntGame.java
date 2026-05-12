@@ -3,6 +3,8 @@ package core;
 import ants.ThrowerAnt;
 import bees.GhostBee;
 import bees.ZombieBee;
+import exceptions.InsufficientFoodException;
+import exceptions.InvalidPlacementException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
@@ -111,6 +113,10 @@ public class AntGame {
     private GraphicsContext gc;
     private boolean gameStarted = false;
     private boolean gameOver = false;
+
+    // error message to show on screen when placement fails
+    private String errorMessage = null;
+    private int errorMessageTimer = 0;
 
     // Saving callback
     private final BiConsumer<String, GameSnapshot> onSaveRequested;
@@ -254,6 +260,12 @@ public class AntGame {
                 iter.remove();
         }
 
+        // count down error message timer
+        if (errorMessageTimer > 0)
+            errorMessageTimer--;
+        else
+            errorMessage = null;
+
         render();
 
         frameCount++;
@@ -315,6 +327,13 @@ public class AntGame {
         gc.fillText("Food: " + colony.getFood() + ", Turn: " + turn + ", Difficulty: " + difficultyLevel.displayName(),
                 20, 140);
 
+        // show error message on screen if there is one
+        if (errorMessage != null) {
+            gc.setFill(Color.RED);
+            gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 16));
+            gc.fillText(errorMessage, 20, 165);
+        }
+
         if (!gameStarted) {
             gc.setFont(Font.font("SansSerif", FontWeight.BOLD, 32));
             gc.setFill(Color.RED);
@@ -348,7 +367,6 @@ public class AntGame {
                     if (containedAnt != null) {
                         Image containedImg = ANT_IMAGES.get(containedAnt.getClass().getName());
                         if (containedImg != null)
-                            // draw contained ant slightly offset so both are visible
                             gc.drawImage(containedImg, rect[0] + PLACE_PAD_W + 8, rect[1] + PLACE_PAD_H);
                     }
 
@@ -446,11 +464,22 @@ public class AntGame {
         for (Map.Entry<double[], Place> entry : colonyAreas.entrySet()) {
             double[] rect = entry.getKey();
             if (contains(rect, mouseX, mouseY)) {
-                if (selectedAnt == null)
+                if (selectedAnt == null) {
                     colony.removeAnt(entry.getValue());
-                else {
+                } else {
                     Ant deployable = buildAnt(selectedAnt.getClass().getName());
-                    colony.deployAnt(entry.getValue(), deployable);
+                    try {
+                        // try to deploy the ant - throws custom exceptions if it fails
+                        colony.deployAnt(entry.getValue(), deployable);
+                    } catch (InsufficientFoodException e) {
+                        // not enough food - show message on screen
+                        showError("Not enough food! Need " + selectedAnt.getFoodCost() + ", have " + colony.getFood());
+                        System.out.println("Cannot place ant: " + e.getMessage());
+                    } catch (InvalidPlacementException e) {
+                        // invalid placement - show message on screen
+                        showError("Cannot place here: " + e.getMessage());
+                        System.out.println("Cannot place ant here: " + e.getMessage());
+                    }
                 }
                 return;
             }
@@ -469,6 +498,18 @@ public class AntGame {
         if (contains(removerArea, mouseX, mouseY)) {
             selectedAnt = null;
         }
+    }
+
+    /**
+     * Shows an error message on screen for a short time.
+     * 
+     * @param message
+     *            The error message to show
+     */
+    private void showError(String message) {
+        this.errorMessage = message;
+        // show for 3 seconds (FPS * 3)
+        this.errorMessageTimer = FPS * 3;
     }
 
     private boolean contains(double[] rect, double x, double y) {
