@@ -4,6 +4,7 @@ import ants.QueenAnt;
 import exceptions.InsufficientFoodException;
 import exceptions.InvalidPlacementException;
 import java.util.ArrayList;
+import java.util.List;
 import places.WaterPlace;
 
 /**
@@ -34,32 +35,44 @@ public class AntColony {
      *            The starting food for this colony
      */
     public AntColony(int numTunnels, int tunnelLength, int moatFrequency, int startingFood) {
+        this(numTunnels, tunnelLength, randomWaterPlaces(numTunnels, tunnelLength, moatFrequency), startingFood);
+    }
+
+    public AntColony(int numTunnels, int tunnelLength, List<String> waterPlaceNames, int startingFood) {
         this.food = startingFood;
         places = new ArrayList<Place>();
         beeEntrances = new ArrayList<Place>();
         queenPlace = new Place(QUEEN_NAME);
-        int remainingMoatPlaces = moatFrequency;
 
         tunnelLength = Math.min(tunnelLength, MAX_TUNNEL_LENGTH);
         Place curr, prev;
         for (int tunnel = 0; tunnel < numTunnels; tunnel++) {
-            int moatIndex = -1;
-            if (remainingMoatPlaces > 1) {
-                moatIndex = (int) (Math.random() * (tunnelLength - 1 - 0 + 1)) + 0;
-            }
             curr = queenPlace;
             for (int step = 0; step < tunnelLength; step++) {
                 prev = curr;
-                if (step == moatIndex) {
-                    curr = new WaterPlace("tunnel[" + tunnel + "-" + step + "]", prev);
+                String placeName = "tunnel[" + tunnel + "-" + step + "]";
+                if (waterPlaceNames != null && waterPlaceNames.contains(placeName)) {
+                    curr = new WaterPlace(placeName, prev);
                 } else {
-                    curr = new Place("tunnel[" + tunnel + "-" + step + "]", prev);
+                    curr = new Place(placeName, prev);
                 }
                 prev.setEntrance(curr);
                 places.add(curr);
             }
             beeEntrances.add(curr);
         }
+    }
+
+    private static List<String> randomWaterPlaces(int numTunnels, int tunnelLength, int moatFrequency) {
+        ArrayList<String> water = new ArrayList<>();
+        if (moatFrequency <= 1) {
+            return water;
+        }
+        for (int tunnel = 0; tunnel < numTunnels; tunnel++) {
+            int moatIndex = (int) (Math.random() * tunnelLength);
+            water.add("tunnel[" + tunnel + "-" + moatIndex + "]");
+        }
+        return water;
     }
 
     /**

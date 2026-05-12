@@ -14,6 +14,9 @@ The repository currently contains a working core game loop, JavaFX GUI, bee inva
 - `HungryAnt`
 - `SlowThrowerAnt`
 - `StunThrowerAnt`
+- `NinjaAnt`
+- `BodyguardAnt`
+- `QueenAnt`
 
 Only ant classes that exist in `src/main/java/ants` are loaded into the in-game selector, so the game will run even though `antlist.properties` still lists a few future ant types that have not been implemented yet.
 
@@ -48,6 +51,16 @@ From the project root:
 ```bash
 mvn compile
 ```
+
+## Export JAR Package
+
+Create the packaged JAR in `target/` with:
+
+```bash
+mvn clean package
+```
+
+The generated project JAR will be written to `target/avb-1.0.0-SNAPSHOT.jar`.
 
 ## Run
 
@@ -92,15 +105,27 @@ The CI workflow runs `mvn -B spotless:check` before `mvn -B test`, so unformatte
 
 ## Gameplay
 
-- The colony is created with 3 tunnels of length 8.
-- You start with 2 food.
+- Choose a difficulty level before starting a new game.
+- Higher levels increase the challenge with tougher layouts and bee waves.
 - Click an ant in the selector bar to choose it.
 - Click a tunnel tile to place the selected ant if you have enough food.
 - Click the remover icon to switch to removal mode, then click a placed ant to remove it.
 - The game begins on the first click.
+- Use `Pause` and `Resume` to temporarily stop and continue the game without losing the current turn, food, ants, bees, or wave state.
+- Use `Reset` to restart the current level quickly.
+- Use `Save` or press `S` to persist the current game for the logged-in user.
 - Bees invade in waves from the hive and move toward the queen.
 - You lose if bees reach the queen.
-- You win if all bees in the hive and colony are eliminated.
+- You complete a level if all bees in the hive and colony are eliminated.
+- Completing a level advances to the next difficulty level.
+- Each completed or lost game records a score in the current user's game history.
+
+## Saves and Game History
+
+- User accounts are stored in `users.dat`.
+- Saved games and score history are stored per user under `saves/`.
+- The main menu lists saved games for the current user and the user's previous game results.
+- Saved games restore the level, layout, food, placed ants, active bees, bee effects, and remaining waves.
 
 ## Implemented Ant Types
 
@@ -173,6 +198,18 @@ The CI workflow runs `mvn -B spotless:check` before `mvn -B test`, so unformatte
 - Range: targets the nearest bee between `0` and `3` places away
 - Effect: stuns the target bee for `1` turn
 
+### `NinjaAnt`
+
+- Effect: does not block bees and can damage bees that pass through its place
+
+### `BodyguardAnt`
+
+- Effect: protects another ant placed in the same tunnel tile
+
+### `QueenAnt`
+
+- Effect: marks the real queen ant and supports queen-specific win/loss behavior
+
 ## Configuration
 
 `src/main/resources/antlist.properties` defines ant classes, image assets, and optional projectile colors for the UI. The game loads this file and the image assets from the classpath, then attempts to load each listed ant class reflectively from the `ants` package. If a class is missing, it is skipped silently.
@@ -197,10 +234,11 @@ What works:
 - Source and tests are structured for Maven
 - JavaFX launcher and GUI code are present
 - Bee waves, ant placement, food tracking, and win/loss conditions are implemented
+- Difficulty levels and level progression are implemented
+- Pause, resume, reset, save, load, score, and per-user game history are implemented
 - Water places are implemented
 - Core ant types listed above are implemented and covered by JUnit tests
 
 What is still partial:
 
-- `NinjaAnt`, `BodyguardAnt`, and `QueenAnt` are referenced in `antlist.properties` but are not implemented in `src/main/java/ants`
 - The current test coverage focuses on the model layer rather than the JavaFX UI

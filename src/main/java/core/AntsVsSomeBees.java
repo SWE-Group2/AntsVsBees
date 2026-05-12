@@ -42,7 +42,7 @@ public class AntsVsSomeBees extends Application {
     }
 
     private SaveManager savesForCurrentUser() {
-        return savesByUser.computeIfAbsent(currentUser, u -> new SaveManager());
+        return savesByUser.computeIfAbsent(currentUser, SaveManager::new);
     }
 
     private void showMenu() {
@@ -72,14 +72,14 @@ public class AntsVsSomeBees extends Application {
         new AntGame(colony, hive, level, stage, (name, snapshot) -> {
             savesForCurrentUser().save(name, snapshot);
             showMenu();
-        }, this::startLevel);
+        }, this::startLevel, result -> savesForCurrentUser().addHistory(result));
     }
 
     private void startLoadedGame(GameSnapshot s) {
         AntGame.fromSnapshot(s, stage, (name, snapshot) -> {
             savesForCurrentUser().save(name, snapshot);
             showMenu();
-        }, this::startLevel);
+        }, this::startLevel, result -> savesForCurrentUser().addHistory(result));
     }
 
     public static void main(String[] args) {
